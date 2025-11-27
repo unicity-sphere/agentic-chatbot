@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../stores/chatStore';
+import { generateUUID } from '../utils/uuid';
 
 interface Activity {
     id: string;
@@ -35,7 +36,7 @@ export function ActivitySelector() {
         const messages = useChatStore.getState().messagesByActivity[activity.id];
         if (activity.greetingMessage && (!messages || messages.length === 0)) {
             addMessage({
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 role: 'assistant',
                 content: [{ type: 'text', text: activity.greetingMessage }],
                 timestamp: Date.now(),

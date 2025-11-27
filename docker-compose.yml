@@ -48,7 +48,7 @@ services:
       AMA_API_KEY:    ${AMA_API_KEY}
       MCP_TRIVIA_URL: http://mcp-trivia:3001/mcp
       MCP_WEB_URL: http://mcp-web:3002/mcp
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       DEBUG_PROMPTS: ${DEBUG_PROMPTS:-false}
     depends_on:
       postgres:
@@ -62,10 +62,10 @@ services:
     build:
       context: .
       dockerfile: packages/ui/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     ports:
       - "5173:80"
-    environment:
-      VITE_API_URL: http://localhost:3000
 
 volumes:
   postgres_data:

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { generateUUID } from '../utils/uuid';
 
 export function MockWallet() {
     const [userId, setUserId] = useState<string>('');
@@ -6,14 +7,14 @@ export function MockWallet() {
     useEffect(() => {
         let id = localStorage.getItem('userId');
         if (!id) {
-            id = `user_${crypto.randomUUID().slice(0, 8)}`;
+            id = `user_${generateUUID().slice(0, 8)}`;
             localStorage.setItem('userId', id);
         }
         setUserId(id);
     }, []);
 
     const regenerate = () => {
-        const newId = `user_${crypto.randomUUID().slice(0, 8)}`;
+        const newId = `user_${generateUUID().slice(0, 8)}`;
         localStorage.setItem('userId', newId);
         setUserId(newId);
         window.location.reload();

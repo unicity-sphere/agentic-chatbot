@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '@agentic/shared';
+import { generateUUID } from '../utils/uuid';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -25,7 +26,7 @@ export function useChat() {
 
         // Add user message
         const userMessage: ChatMessage = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             role: 'user',
             content: [{ type: 'text', text }],
             timestamp: Date.now(),
@@ -34,7 +35,7 @@ export function useChat() {
 
         // Create placeholder for assistant response
         const assistantMessage: ChatMessage = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             role: 'assistant',
             content: [{ type: 'text', text: '' }],
             timestamp: Date.now(),

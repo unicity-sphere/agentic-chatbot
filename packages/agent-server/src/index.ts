@@ -9,8 +9,27 @@ const app = new Hono();
 
 // Middleware
 app.use('*', logger());
+
+// Parse CORS origins from environment (comma-separated list)
+const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : ['http://localhost:5173'];
+
+console.log('[CORS] Allowed origins:', corsOrigins);
+
 app.use('*', cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (origin) => {
+        console.log('[CORS] Request origin:', origin);
+        // Reject requests with no origin header for security
+        if (!origin) {
+            console.log('[CORS] Rejected: No origin header');
+            return corsOrigins[0]; // Return a valid origin to avoid wildcard
+        }
+        // Check if origin is in allowed list
+        const allowed = corsOrigins.includes(origin);
+        console.log('[CORS] Origin allowed:', allowed);
+        return allowed ? origin : corsOrigins[0];
+    },
     credentials: true,
 }));
 
