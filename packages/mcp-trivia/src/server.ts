@@ -10,8 +10,13 @@ export interface TriviaServerOptions {
     questions?: TriviaQuestion[];
 }
 
+export interface ActiveQuestion {
+    question: TriviaQuestion;
+    shuffledOptions: string[];
+}
+
 export interface TriviaServerState {
-    currentQuestions: Map<string, TriviaQuestion>;
+    currentQuestions: Map<string, ActiveQuestion>;
     scores: Map<string, number>;
 }
 
@@ -29,6 +34,22 @@ export const shuffleArray = <T>(array: T[], random: () => number): T[] => {
 
   return newArray;
 };
+
+/**
+ * Resolves a user's input to the specific option text if they typed a letter (a, b, c...),
+ * otherwise returns their raw input trimmed.
+ */
+function resolveAnswerFromInput(input: string, options: string[]): string {
+    const normalizedInput = input.toLowerCase().trim();
+    const index = normalizedInput.charCodeAt(0) - 'a'.charCodeAt(0);
+
+    // Check if input is a valid single-letter index within the bounds of the options
+    if (normalizedInput.length === 1 && index >= 0 && index < options.length) {
+        return options[index];
+    }
+
+    return input.trim();
+}
 
 export function createTriviaServer(options: TriviaServerOptions = {}): { server: McpServer; state: TriviaServerState } {
     const random = options.random ?? Math.random;
@@ -76,9 +97,8 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
             }
 
             const question = filtered[Math.floor(random() * filtered.length)];
-            state.currentQuestions.set(userId, question);
-
-            const allAnswers = shuffleArray([question.correctAnswer, ...question.incorrectAnswers], random);
+            const shuffledOptions = shuffleArray([question.correctAnswer, ...question.incorrectAnswers], random);
+            state.currentQuestions.set(userId, { question, shuffledOptions });
 
             return {
                 content: [{
@@ -87,7 +107,7 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
                         questionId: question.id,
                         category: question.category,
                         question: question.question,
-                        options: allAnswers,
+                        options: shuffledOptions,
                     }),
                 }],
             };
@@ -99,19 +119,23 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
         'check_answer',
         'Check if the provided answer is correct for the current question',
         {
-            answer: z.string().describe('The user\'s answer'),
+            answer: z.string().describe('The user\'s answer (text or letter a/b/c/d)'),
         },
         async ({ answer }, extra) => {
             const userId = (extra as any)?.meta?.userId || 'anonymous';
-            const question = state.currentQuestions.get(userId);
+            const activeQuestion = state.currentQuestions.get(userId);
 
-            if (!question) {
+            if (!activeQuestion) {
                 return {
                     content: [{ type: 'text', text: JSON.stringify({ error: 'No active question. Get a question first.' }) }],
                 };
             }
 
-            const isCorrect = answer.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
+            const { question, shuffledOptions } = activeQuestion;
+
+            const answerText = resolveAnswerFromInput(answer, shuffledOptions);
+
+            const isCorrect = answerText.toLowerCase() === question.correctAnswer.toLowerCase();
 
             if (isCorrect) {
                 const currentScore = state.scores.get(userId) || 0;

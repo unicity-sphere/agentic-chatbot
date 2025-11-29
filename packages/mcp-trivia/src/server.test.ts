@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createTriviaServer, type TriviaServerState } from './server.js';
+import { createTriviaServer, type TriviaServerState, type ActiveQuestion } from './server.js';
 import { categories, type TriviaQuestion } from './data/questions.js';
 
 const TEST_QUESTIONS: TriviaQuestion[] = [
@@ -33,6 +33,13 @@ function createSeededRandom(seed: number): () => number {
     return () => {
         state = (state * 1103515245 + 12345) & 0x7fffffff;
         return state / 0x7fffffff;
+    };
+}
+
+function createActiveQuestion(question: TriviaQuestion, shuffledOptions?: string[]): ActiveQuestion {
+    return {
+        question,
+        shuffledOptions: shuffledOptions ?? [question.correctAnswer, ...question.incorrectAnswers],
     };
 }
 
@@ -127,13 +134,16 @@ describe('MCP Trivia Server', () => {
             expect(data.error).toBe('No questions found for criteria');
         });
 
-        it('stores current question in state', async () => {
+        it('stores current question with shuffled options in state', async () => {
             const { client, state } = await setupTest();
 
             await client.callTool({ name: 'get_question', arguments: {} });
 
-            expect(JSON.stringify(state.currentQuestions.get('anonymous'))).toEqual(
-                '{"id":"test-2","category":"Test Category","question":"What color is the sky?","correctAnswer":"Blue","incorrectAnswers":["Green","Red","Yellow"]}');
+            const activeQuestion = state.currentQuestions.get('anonymous');
+            expect(activeQuestion?.question.id).toBe('test-2');
+            expect(activeQuestion?.question.category).toEqual('Test Category');
+            expect(activeQuestion?.question.correctAnswer).toEqual('Blue');
+            expect(activeQuestion?.shuffledOptions).toEqual(['Blue', 'Green', 'Yellow', 'Red']);
         });
     });
 
@@ -150,9 +160,9 @@ describe('MCP Trivia Server', () => {
             expect(data.error).toBe('No active question. Get a question first.');
         });
 
-        it('accepts correct answer (case-insensitive, trimmed)', async () => {
+        it('accepts correct text answer (case-insensitive, trimmed)', async () => {
             const { client, state } = await setupTest();
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[0]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
 
             const result = await client.callTool({
                 name: 'check_answer',
@@ -171,9 +181,9 @@ describe('MCP Trivia Server', () => {
             expect(data.newScore).toBe(1);
         });
 
-        it('rejects incorrect answer', async () => {
+        it('rejects incorrect text answer', async () => {
             const { client, state } = await setupTest();
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[0]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
 
             const result = await client.callTool({
                 name: 'check_answer',
@@ -189,9 +199,73 @@ describe('MCP Trivia Server', () => {
             expect(data.explanation).toBe('The correct answer was: Four');
         });
 
+        it('accepts correct letter answer (a/b/c/d)', async () => {
+            const { client, state } = await setupTest();
+            // Shuffled so correct answer "Four" is at index 2 (letter "c")
+            state.currentQuestions.set('anonymous', createActiveQuestion(
+                TEST_QUESTIONS[0],
+                ['Three', 'Five', 'Four', 'Six']
+            ));
+
+            const result = await client.callTool({
+                name: 'check_answer',
+                arguments: { answer: 'c' },
+            });
+            const data = parseToolResult(result) as { correct: boolean; correctAnswer: string };
+
+            expect(data.correct).toBe(true);
+            expect(data.correctAnswer).toBe('Four');
+        });
+
+        it('accepts letter answers case-insensitively with whitespace', async () => {
+            const { client, state } = await setupTest();
+            state.currentQuestions.set('anonymous', createActiveQuestion(
+                TEST_QUESTIONS[0],
+                ['Four', 'Three', 'Five', 'Six']  // correct at index 0 = "a"
+            ));
+
+            const result = await client.callTool({
+                name: 'check_answer',
+                arguments: { answer: '  A  ' },
+            });
+            const data = parseToolResult(result) as { correct: boolean };
+
+            expect(data.correct).toBe(true);
+        });
+
+        it('rejects incorrect letter answer', async () => {
+            const { client, state } = await setupTest();
+            state.currentQuestions.set('anonymous', createActiveQuestion(
+                TEST_QUESTIONS[0],
+                ['Three', 'Four', 'Five', 'Six']  // correct at index 1 = "b"
+            ));
+
+            const result = await client.callTool({
+                name: 'check_answer',
+                arguments: { answer: 'a' },
+            });
+            const data = parseToolResult(result) as { correct: boolean; correctAnswer: string };
+
+            expect(data.correct).toBe(false);
+            expect(data.correctAnswer).toBe('Four');
+        });
+
+        it('treats invalid letters as text answers', async () => {
+            const { client, state } = await setupTest();
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
+
+            const result = await client.callTool({
+                name: 'check_answer',
+                arguments: { answer: 'e' },
+            });
+            const data = parseToolResult(result) as { correct: boolean };
+
+            expect(data.correct).toBe(false);
+        });
+
         it('clears current question after answering', async () => {
             const { client, state } = await setupTest();
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[0]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
 
             await client.callTool({ name: 'check_answer', arguments: { answer: 'Four' } });
 
@@ -201,15 +275,15 @@ describe('MCP Trivia Server', () => {
         it('increments score only for correct answers', async () => {
             const { client, state } = await setupTest();
 
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[0]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
             await client.callTool({ name: 'check_answer', arguments: { answer: 'Wrong' } });
             expect(state.scores.get('anonymous') ?? 0).toBe(0);
 
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[0]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[0]));
             await client.callTool({ name: 'check_answer', arguments: { answer: 'Four' } });
             expect(state.scores.get('anonymous')).toBe(1);
 
-            state.currentQuestions.set('anonymous', TEST_QUESTIONS[1]);
+            state.currentQuestions.set('anonymous', createActiveQuestion(TEST_QUESTIONS[1]));
             await client.callTool({ name: 'check_answer', arguments: { answer: 'Blue' } });
             expect(state.scores.get('anonymous')).toBe(2);
         });
