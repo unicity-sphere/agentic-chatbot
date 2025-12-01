@@ -142,7 +142,6 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
 
         // Debug logging - log the full prompt structure
         if (process.env.DEBUG_PROMPTS === 'true') {
-            console.log('\n========== LLM DEBUG: FULL PROMPT ==========');
             console.log('SYSTEM PROMPT:');
             console.log(enhancedSystemPrompt);
             console.log('\nMESSAGES ARRAY:');
@@ -161,7 +160,6 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                 }
             });
             console.log('\nAVAILABLE TOOLS:', Object.keys(allTools));
-            console.log('==========================================\n');
         }
 
         // Run the agent loop with streaming
