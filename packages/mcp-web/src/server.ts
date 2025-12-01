@@ -1,139 +1,72 @@
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { z } from 'zod';
-import * as cheerio from 'cheerio';
+import { webFetch, webFetchSchema } from './tools/web-fetch.js';
+import { jsonFetch, jsonFetchSchema } from './tools/json-fetch.js';
+import { webSearch, webSearchSchema } from './tools/web-search.js';
 
 const server = new McpServer({
-    name: 'web',
-    version: '1.0.0',
+  name: 'web',
+  version: '2.0.0',
 });
 
-// Tool: Fetch web page content
+// Tool 1: Web Fetch
 server.tool(
-    'fetch',
-    'Fetch and extract clean text content from a web page URL',
-    {
-        url: z.string().url().describe('The URL to fetch'),
-        selector: z.string().optional().describe('Optional CSS selector to extract specific content'),
-    },
-    async ({ url, selector }) => {
-        try {
-            console.log(`[Web] Fetching: ${url}`);
-
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (compatible; AgenticBot/1.0)',
-                },
-            });
-
-            if (!response.ok) {
-                return {
-                    content: [{
-                        type: 'text',
-                        text: JSON.stringify({
-                            error: `HTTP ${response.status}: ${response.statusText}`,
-                        }),
-                    }],
-                };
-            }
-
-            const html = await response.text();
-            const $ = cheerio.load(html);
-
-            // Remove unwanted elements
-            $('script, style, nav, header, footer, iframe, noscript').remove();
-
-            let textContent: string = '';
-
-            if (selector) {
-                // Extract content from specific selector
-                textContent = $(selector).text();
-            } else {
-                // Extract main content - try common article selectors first
-                const articleSelectors = [
-                    'article',
-                    'main',
-                    '[role="main"]',
-                    '.article-content',
-                    '.post-content',
-                    '.entry-content',
-                ];
-
-                let found = false;
-                for (const sel of articleSelectors) {
-                    const element = $(sel);
-                    if (element.length > 0) {
-                        textContent = element.text();
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    // Fallback to body
-                    textContent = $('body').text();
-                }
-            }
-
-            // Clean up the text
-            textContent = textContent
-                .replace(/\s+/g, ' ') // Normalize whitespace
-                .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
-                .trim();
-
-            // Limit to reasonable size (50KB)
-            if (textContent.length > 50000) {
-                textContent = textContent.substring(0, 50000) + '\n\n[Content truncated...]';
-            }
-
-            return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        url,
-                        title: $('title').text().trim(),
-                        content: textContent,
-                        length: textContent.length,
-                    }),
-                }],
-            };
-        } catch (error) {
-            console.error('[Web] Fetch error:', error);
-            return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        error: error instanceof Error ? error.message : 'Failed to fetch URL',
-                    }),
-                }],
-            };
-        }
-    }
+  'fetch',
+  'Fetch and extract clean content from web pages. Returns markdown, HTML, or plain text.',
+  webFetchSchema,
+  webFetch
 );
 
-// Start server with HTTP transport
+// Tool 2: JSON Fetch
+server.tool(
+  'json_fetch',
+  'Fetch JSON data from remote APIs. Supports custom headers and all HTTP methods.',
+  jsonFetchSchema,
+  jsonFetch
+);
+
+// Tool 3: Web Search - with metadata support
+server.tool(
+  'search',
+  'Search the web using DuckDuckGo. Returns titles, URLs, and descriptions.',
+  webSearchSchema,
+  async (args: any, extra?: { _meta?: any }) => {
+    // Extract user metadata if provided
+    const meta = extra?._meta ? {
+      userId: extra._meta.userId,
+      userIp: extra._meta.userIp,
+      userCountry: extra._meta.userCountry,
+    } : undefined;
+
+    return webSearch(args, meta);
+  }
+);
+
+// Start HTTP server
 async function main() {
-    const port = parseInt(process.env.PORT || '3002');
+  const port = parseInt(process.env.PORT || '3002');
 
-    const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => crypto.randomUUID(),
-    });
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+  });
 
-    await server.connect(transport);
+  await server.connect(transport);
 
-    const httpServer = createServer((req, res) => {
-        if (req.url === '/mcp') {
-            transport.handleRequest(req, res);
-        } else {
-            res.writeHead(404);
-            res.end('Not Found');
-        }
-    });
+  const httpServer = createServer((req, res) => {
+    if (req.url === '/mcp') {
+      transport.handleRequest(req, res);
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+    }
+  });
 
-    httpServer.listen(port, () => {
-        console.log(`Web MCP server running on port ${port}`);
-    });
+  httpServer.listen(port, () => {
+    console.log(`Enhanced web MCP server running on port ${port}`);
+    console.log('Tools: fetch, json_fetch, search');
+  });
 }
 
 main().catch(console.error);

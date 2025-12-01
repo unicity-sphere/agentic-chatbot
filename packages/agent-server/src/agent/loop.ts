@@ -8,6 +8,8 @@ export interface AgentContext {
     activity: ActivityConfig;
     userId: string;
     messages: ChatMessage[];
+    userIp?: string;
+    userCountry?: string;
 }
 
 function getUserFriendlyError(error: unknown): string {
@@ -97,7 +99,7 @@ function convertToCoreMessages(messages: ChatMessage[]): CoreMessage[] {
 }
 
 export async function* runAgentStream(ctx: AgentContext) {
-    const { activity, userId, messages } = ctx;
+    const { activity, userId, messages, userIp, userCountry } = ctx;
 
     try {
         console.log('[Agent] Starting agent stream for activity:', activity.id);
@@ -118,8 +120,9 @@ export async function* runAgentStream(ctx: AgentContext) {
         await globalMcpManager.connect(activity.mcpServers);
 
         // Get tools only from servers configured for this activity
+        // Pass user metadata (IP, country) for geolocation-based features
         const allowedServerNames = activity.mcpServers.map(s => s.name);
-        const mcpTools = await globalMcpManager.getTools(allowedServerNames, { userId });
+        const mcpTools = await globalMcpManager.getTools(allowedServerNames, { userId, userIp, userCountry });
         console.log('[Agent] Tools loaded for activity', activity.id + ':', Object.keys({ ...localTools, ...mcpTools }));
 
         const allTools = { ...localTools, ...mcpTools };
@@ -191,18 +194,19 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
         console.log('[Agent] Starting text stream...');
         let charCount = 0;
         let reasoningText = '';
+        const debugLLM = process.env.DEBUG_PROMPTS === 'true';
 
         // Stream the response - use fullStream to get all events
         try {
             for await (const part of result.fullStream) {
-                console.log('[Agent] Stream part type:', part.type);
-
+                // if (debugLLM) {
+                //     console.log('[Agent] Stream part type:', part.type);
+                // }
                 if (part.type === 'text-delta') {
                     charCount += part.textDelta.length;
                     yield { type: 'text-delta', text: part.textDelta };
                 } else if (part.type === 'reasoning') {
                     // Extended thinking models emit reasoning content
-                    console.log('[Agent] Reasoning delta:', part.textDelta?.substring(0, 50));
                     reasoningText += part.textDelta;
                     yield { type: 'reasoning', text: part.textDelta };
                 } else if (part.type === 'tool-call') {
@@ -231,6 +235,9 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                     console.log('[Agent] Finish reason:', part.finishReason);
                     if (reasoningText) {
                         console.log('[Agent] Total reasoning text length:', reasoningText.length);
+                        if (debugLLM) {
+                            console.log('[Agent] Complete reasoning text:', reasoningText);
+                        }
                     }
                 }
             }

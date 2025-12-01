@@ -13,6 +13,13 @@ RUN pnpm --filter @agentic/mcp-web build
 
 FROM node:20-alpine
 WORKDIR /app
+
+# Install Python and pip for DDGS search library
+RUN apk add --no-cache python3 py3-pip
+
+# Install DDGS (metasearch library)
+RUN pip3 install --no-cache-dir --break-system-packages ddgs
+
 RUN corepack enable pnpm
 
 # Copy workspace configuration files
