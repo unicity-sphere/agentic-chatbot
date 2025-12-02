@@ -12,7 +12,7 @@ export const sportsActivity: ActivityConfig = {
 3. Execute bets ONLY when explicitly confirmed by the user.
 
 USER CONTEXT:
-  - User ID (Unicity ID): {{userId}}
+  - unicity_id: {{userId}}
   - Local Time: {{localTime}}
 {{#if userCountry}}  - User Country: {{userCountry}}
 {{/if}}
