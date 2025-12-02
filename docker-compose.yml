@@ -77,6 +77,7 @@ services:
       dockerfile: packages/ui/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
     ports:
       - "5173:80"
 

@@ -2,8 +2,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 RUN corepack enable pnpm
 
-# Build argument for API URL
+# Build arguments
 ARG VITE_API_URL=http://localhost:3000
+ARG VITE_BASE_PATH=/
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/shared/package.json ./packages/shared/
@@ -15,8 +16,9 @@ COPY packages/shared ./packages/shared
 COPY packages/ui ./packages/ui
 
 RUN pnpm --filter @agentic/shared build
-# Set VITE_API_URL as environment variable during build
+# Set environment variables during build
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 RUN pnpm --filter @agentic/ui build
 
 FROM nginx:alpine
