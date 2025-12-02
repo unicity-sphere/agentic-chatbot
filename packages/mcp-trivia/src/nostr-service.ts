@@ -83,7 +83,7 @@ export class NostrService {
             const senderPubkey = TokenTransferProtocol.getSender(event);
             const replyToEventId = TokenTransferProtocol.getReplyToEventId(event);
 
-            console.log(`[Nostr] Received token transfer from ${senderPubkey.slice(0, 16)}... replyTo=${replyToEventId?.slice(0, 16) || 'none'}`);
+            console.log(`[Nostr] Received token transfer from ${senderPubkey.slice(0, 16)}... replyTo=${replyToEventId || 'none'}`);
 
             // Find matching pending payment
             let pending: PendingPayment | undefined;
@@ -91,6 +91,10 @@ export class NostrService {
 
             // Match by replyToEventId (preferred)
             if (replyToEventId) {
+                console.log("Trying to match by event ID");
+                for (const [key, p] of this.pendingPayments) {
+                    console.log("Option: " + key);
+                }
                 pending = this.pendingPayments.get(replyToEventId);
                 if (pending) {
                     pendingKey = replyToEventId;
@@ -301,14 +305,22 @@ export class NostrService {
                     userPubkey,
                     resolve,
                     timeout: setTimeout(() => {
-                        if (this.pendingPayments.has(eventId)) {
+                        /*if (this.pendingPayments.has(eventId)) {
                             this.pendingPayments.delete(eventId);
                             resolve(false);
-                        }
+                        }*/
                     }, this.config.paymentTimeoutMs),
                 };
 
                 this.pendingPayments.set(eventId, pending);
+
+                // Timeout after configured seconds
+                /*setTimeout(() => {
+                    if (this.pendingPayments.has(eventId)) {
+                      this.pendingPayments.delete(eventId);
+                      resolve(false);
+                    }
+                }, this.config.paymentTimeoutSeconds * 1000);*/
             });
         };
 

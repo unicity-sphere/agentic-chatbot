@@ -143,18 +143,26 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
             // Determine user ID
             const userId = unicity_id || (extra as any)?.meta?.userId || 'anonymous';
 
+            console.log("Getting a new question: UserID: '" + userId + "'");
+
             // Check payment if enabled
             if (paymentEnabled && paymentTracker && nostrService && config) {
+                console.log("Payment enabled");
+
                 if (!unicity_id) {
+                    console.log("User ID missing");
                     return {
                         content: [{ type: 'text', text: JSON.stringify({ error: 'unicity_id is required for paid trivia' }) }],
                     };
                 }
 
                 if (!paymentTracker.hasValidPass(unicity_id)) {
+                    console.log("Need to pay");
                     // Need to pay - send payment request
                     try {
-                        const userPubkey = await nostrService.resolvePubkey(unicity_id);
+                        const cleanId = unicity_id.replace("@unicity", "").replace("@", "").trim();
+                        const userPubkey = await nostrService.resolvePubkey(cleanId);
+                        console.log("User's public key: " + userPubkey);
                         if (!userPubkey) {
                             return {
                                 content: [{
@@ -167,14 +175,31 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
                             };
                         }
 
+                        console.log("Will send payment request");
                         const { eventId, waitForPayment } = await nostrService.sendPaymentRequest(
                             unicity_id,
                             userPubkey
                         );
 
+                        console.log("Will wait for response to the payment request");
                         // Store waiter for confirm_payment
                         pendingWaiters.set(eventId, { unicityId: unicity_id, waitForPayment });
 
+                        const paymentReceived = waitForPayment().
+                            then((paid) => {
+                                if (paid) {
+                                    console.log(`[Background] Payment received for ${unicity_id}! Granting pass.`);
+                                    const pass = paymentTracker.grantDayPass(unicity_id);
+                                } else {
+                                    console.log(`[Background] Payment failed for ${eventId}`);
+                                }
+                                return paid;
+                            })
+                            .finally(() => {
+                                pendingWaiters.delete(eventId);
+                            });
+
+                        console.log("Telling that day pass is required");
                         return {
                             content: [{
                                 type: 'text',
@@ -187,6 +212,7 @@ export function createTriviaServer(options: TriviaServerOptions = {}): { server:
                             }],
                         };
                     } catch (error) {
+                        console.log("Error happened", error);
                         return {
                             content: [{
                                 type: 'text',
