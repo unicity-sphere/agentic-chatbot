@@ -24,12 +24,40 @@ async def fetch_tool(input: FetchInput) -> dict:
     try:
         print(f"[Fetch] URL: {input.url}, Format: {input.format}")
 
-        # Fetch HTML
-        response = requests.get(
-            str(input.url),
-            headers={"User-Agent": "Mozilla/5.0 (compatible; AgenticBot/1.0)"},
-            timeout=10
-        )
+        # Fetch HTML - try with SSL verification first, then without if it fails
+        # Use realistic browser headers to avoid bot detection
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+        }
+
+        try:
+            response = requests.get(
+                str(input.url),
+                headers=headers,
+                timeout=10,
+                verify=True
+            )
+        except requests.exceptions.SSLError as ssl_error:
+            print(f"[Fetch] SSL verification failed, retrying without verification: {ssl_error}")
+            import warnings
+            warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+            response = requests.get(
+                str(input.url),
+                headers=headers,
+                timeout=10,
+                verify=False  # Disable SSL verification for problematic sites
+            )
+
         response.raise_for_status()
         html = response.text
 

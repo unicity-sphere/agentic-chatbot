@@ -21,16 +21,17 @@ async def search_tool(input: SearchInput) -> dict:
     try:
         print(f"[Search] Query: {input.query}, Region: {input.region}, Backend: {input.backend}, Max: {input.max_results}")
 
-        ddgs = DDGS()
-        results = ddgs.text(
-            keywords=input.query,
-            region=input.region,
-            safesearch="off",
-            max_results=input.max_results,
-            backend=input.backend
-        )
-
-        results_list = list(results)
+        # DDGS() returns a context manager, use with statement
+        # Note: DDGS handles user-agent internally with realistic browser headers
+        with DDGS() as ddgs:
+            results = ddgs.text(
+                query=input.query,  # Changed from 'keywords' to 'query'
+                region=input.region,
+                safesearch="off",
+                max_results=input.max_results,
+                backend=input.backend
+            )
+            results_list = list(results)
 
         print(f"[Search] Found {len(results_list)} results")
 

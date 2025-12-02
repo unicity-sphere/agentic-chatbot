@@ -143,13 +143,16 @@ pnpm db:migrate
 
 3. **Start services** (in separate terminals):
 ```bash
-# MCP Trivia Server
+# MCP Trivia Server (TypeScript)
 cd packages/mcp-trivia
 pnpm dev
 
-# MCP Web Server
-cd packages/mcp-web
-pnpm dev
+# MCP Web Server (Python)
+cd packages/mcp-web-py
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .
+python -m src.server
 
 # Agent Server
 cd packages/agent-server
