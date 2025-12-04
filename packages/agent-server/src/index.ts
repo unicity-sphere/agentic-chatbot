@@ -5,6 +5,8 @@ import { serve } from '@hono/node-server';
 import { chatRouter } from './routes/chat.js';
 import { activitiesRouter } from './routes/activities.js';
 
+import { imagesRouter } from './routes/images.js';
+
 const app = new Hono();
 
 // Middleware
@@ -36,6 +38,7 @@ app.use('*', cors({
 // Routes
 app.route('/chat', chatRouter);
 app.route('/activities', activitiesRouter);
+app.route('/images', imagesRouter);
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }));

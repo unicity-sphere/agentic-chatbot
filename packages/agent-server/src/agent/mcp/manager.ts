@@ -3,6 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import type { McpServerConfig } from '@agentic/shared';
 import { tool, type CoreTool } from 'ai';
 import { z } from 'zod';
+import { imageStore } from '../../store/image-store.js';
 
 interface ConnectedMcp {
     client: Client;
@@ -142,12 +143,35 @@ export class McpManager {
 
                             console.log(`[MCP] Tool ${mcpTool.name} completed successfully`);
 
+                            // Process result content to handle images
+                            // If we find base64 images, store them and replace with URL
+                            const content = result.content as any[];
+                            const processedContent = content.map((item: any) => {
+                                if (item.type === 'image' && item.data) {
+                                    console.log(`[MCP] Intercepting image from tool ${mcpTool.name}`);
+                                    const imageId = imageStore.store(item.data, item.mimeType);
+                                    const baseUrl = process.env.API_BASE_URL || 'http://localhost:5173';
+                                    const imageUrl = `${baseUrl}/api/images/${imageId}`;
+
+                                    console.log(`[MCP] Stored image ${imageId}, replacing with URL: ${imageUrl}`);
+
+                                    // Return as text so LLM sees the URL
+                                    // We use markdown image syntax so frontend can potentially render it if it supports markdown images
+                                    // Or just plain URL if we want LLM to output it as a link
+                                    return {
+                                        type: 'text',
+                                        text: `![Image](${imageUrl})`
+                                    };
+                                }
+                                return item;
+                            });
+
                             // Debug: Log MCP tool response
                             if (process.env.DEBUG_MCP === 'true') {
-                                console.log(`[MCP Debug] Result:`, JSON.stringify(result.content, null, 2).substring(0, 500));
+                                console.log(`[MCP Debug] Result:`, JSON.stringify(processedContent, null, 2).substring(0, 500));
                             }
 
-                            return result.content;
+                            return processedContent;
                         } catch (error) {
                             console.error(`[MCP] Exception during tool execution: ${mcpTool.name}`);
                             console.error(`[MCP] Error:`, error);

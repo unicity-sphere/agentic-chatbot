@@ -337,8 +337,8 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                         // Actually streamText 'finish' event is for the whole generation.
 
                         if (part.finishReason !== 'stop' && part.finishReason !== 'length') {
-                             // If it's not a normal stop, it might be an error or filter
-                             yield { type: 'text-delta', text: `\n\n_The AI response was empty or filtered. (Reason: ${part.finishReason})_\n` };
+                            // If it's not a normal stop, it might be an error or filter
+                            yield { type: 'text-delta', text: `\n\n_The AI response was empty or filtered. (Reason: ${part.finishReason})_\n` };
                         }
                     }
 

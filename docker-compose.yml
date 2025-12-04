@@ -44,6 +44,7 @@ services:
       PORT: 3000
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       AMA_API_KEY: ${AMA_API_KEY}
+      API_BASE_URL: ${API_BASE_URL}
       MCP_TRIVIA_URL: http://mcp-trivia:3001/mcp
       MCP_WEB_URL: http://mcp-web:3002/mcp
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
