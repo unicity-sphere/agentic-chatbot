@@ -263,6 +263,25 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
         // Log snippet of system prompt for debugging
         console.log('[Agent] System prompt length:', enhancedSystemPrompt.length, 'chars');
         console.log('[Agent] System prompt start:', enhancedSystemPrompt.substring(0, 150).replace(/\n/g, ' '));
+        console.log('[Agent] Number of messages:', coreMessages.length);
+        console.log('[Agent] Number of tools:', Object.keys(allTools).length);
+
+        // Estimate token usage
+        const estimatedPromptTokens = Math.ceil(enhancedSystemPrompt.length / 4) +
+                                      coreMessages.reduce((sum, msg) => {
+                                        const content = Array.isArray(msg.content)
+                                          ? msg.content.map(c => c.type === 'text' ? c.text : '').join(' ')
+                                          : String(msg.content);
+                                        return sum + Math.ceil(content.length / 4);
+                                      }, 0);
+        console.log('[Agent] Estimated prompt tokens:', estimatedPromptTokens, '(rough estimate)');
+
+        if (estimatedPromptTokens > 1500) {
+          console.warn('[Agent] ⚠️  Large prompt detected! This may cause empty responses.');
+          console.warn('[Agent]     System prompt: ~', Math.ceil(enhancedSystemPrompt.length / 4), 'tokens');
+          console.warn('[Agent]     Messages: ~', estimatedPromptTokens - Math.ceil(enhancedSystemPrompt.length / 4), 'tokens');
+          console.warn('[Agent]     Tools:', Object.keys(allTools).length, 'tools');
+        }
 
         // Debug logging - log the full prompt structure
         if (process.env.DEBUG_PROMPTS === 'true') {

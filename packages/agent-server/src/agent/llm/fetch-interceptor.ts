@@ -48,17 +48,26 @@ export function createLoggingFetch(context: { requestId?: string }): typeof fetc
           const decoder = new TextDecoder();
           let sseEventCount = 0;
           let buffer = '';
+          const allEvents: string[] = []; // Store all events for potential debugging
 
           if (!reader) {
             console.warn(`[HTTP ${context.requestId}] SSE stream has no body reader`);
             return;
           }
 
+          console.log(`[HTTP ${context.requestId}] === BEGIN RAW SSE STREAM ===`);
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+
+            // Log raw chunks for maximum visibility
+            if (chunk.trim()) {
+              console.log(`[HTTP ${context.requestId}] RAW CHUNK:`, chunk);
+            }
 
             // Split by double newline (SSE event separator)
             const events = buffer.split('\n\n');
@@ -68,20 +77,110 @@ export function createLoggingFetch(context: { requestId?: string }): typeof fetc
               if (!event.trim()) continue;
 
               sseEventCount++;
+              allEvents.push(event);
 
-              // Log first few events and any error/blocked events
-              if (sseEventCount <= 3 || event.includes('blockReason') || event.includes('finishReason')) {
-                console.log(`[HTTP ${context.requestId}] SSE Event #${sseEventCount}:`, event.substring(0, 500));
+              // Parse and log the event data
+              console.log(`[HTTP ${context.requestId}] SSE Event #${sseEventCount}:`);
+              console.log(`[HTTP ${context.requestId}]   Raw: ${event}`);
+
+              // Try to parse JSON from "data:" lines
+              const dataMatch = event.match(/^data:\s*(.+)$/m);
+              if (dataMatch) {
+                try {
+                  const parsed = JSON.parse(dataMatch[1]);
+                  console.log(`[HTTP ${context.requestId}]   Parsed:`, JSON.stringify(parsed, null, 2));
+
+                  // Check for important fields
+                  if (parsed.candidates) {
+                    parsed.candidates.forEach((candidate: any, idx: number) => {
+                      console.log(`[HTTP ${context.requestId}]   Candidate ${idx}:`, {
+                        finishReason: candidate.finishReason,
+                        safetyRatings: candidate.safetyRatings,
+                        content: candidate.content,
+                        groundingMetadata: candidate.groundingMetadata,
+                      });
+
+                      // Check if parts array is empty
+                      if (candidate.content?.parts?.length === 0) {
+                        console.warn(`[HTTP ${context.requestId}]   ⚠️  EMPTY PARTS ARRAY - No content generated!`);
+                      }
+
+                      // Check for safety blocks
+                      if (candidate.safetyRatings) {
+                        candidate.safetyRatings.forEach((rating: any) => {
+                          if (rating.blocked || rating.probability === 'HIGH') {
+                            console.warn(`[HTTP ${context.requestId}]   ⚠️  SAFETY ISSUE: ${rating.category} - ${rating.probability}`);
+                          }
+                        });
+                      }
+                    });
+                  }
+
+                  // Check for errors
+                  if (parsed.error) {
+                    console.error(`[HTTP ${context.requestId}]   ⚠️  ERROR IN SSE:`, parsed.error);
+                  }
+                } catch (parseError) {
+                  console.log(`[HTTP ${context.requestId}]   (Could not parse as JSON)`);
+                }
               }
 
               // Check for content filtering or blocks
-              if (event.includes('blockReason') || event.includes('BLOCK_REASON')) {
-                console.warn(`[HTTP ${context.requestId}] ⚠️  Content blocked in SSE stream!`, event);
+              if (event.includes('blockReason') || event.includes('BLOCK_REASON') || event.includes('SAFETY')) {
+                console.warn(`[HTTP ${context.requestId}]   ⚠️  Potential content filtering detected!`);
               }
             }
           }
 
+          // Process any remaining buffered data
+          if (buffer.trim()) {
+            console.log(`[HTTP ${context.requestId}] FINAL BUFFER (not terminated with \\n\\n):`, buffer);
+            sseEventCount++;
+            allEvents.push(buffer);
+
+            // Parse the final buffer
+            const dataMatch = buffer.match(/^data:\s*(.+)$/m);
+            if (dataMatch) {
+              try {
+                const parsed = JSON.parse(dataMatch[1]);
+                console.log(`[HTTP ${context.requestId}]   Final event parsed:`, JSON.stringify(parsed, null, 2));
+
+                if (parsed.candidates) {
+                  parsed.candidates.forEach((candidate: any, idx: number) => {
+                    console.log(`[HTTP ${context.requestId}]   Candidate ${idx}:`, {
+                      finishReason: candidate.finishReason,
+                      safetyRatings: candidate.safetyRatings,
+                      content: candidate.content,
+                    });
+
+                    // Check if parts field is missing or empty
+                    if (!candidate.content?.parts) {
+                      console.warn(`[HTTP ${context.requestId}]   ⚠️  MISSING PARTS FIELD - Gemini returned no content!`);
+                      console.warn(`[HTTP ${context.requestId}]   This usually means:`);
+                      console.warn(`[HTTP ${context.requestId}]     - Model couldn't generate a response`);
+                      console.warn(`[HTTP ${context.requestId}]     - Prompt is too large (${parsed.usageMetadata?.promptTokenCount} tokens)`);
+                      console.warn(`[HTTP ${context.requestId}]     - Tool schema issues preventing generation`);
+                    } else if (candidate.content.parts.length === 0) {
+                      console.warn(`[HTTP ${context.requestId}]   ⚠️  EMPTY PARTS ARRAY - No content generated!`);
+                    }
+                  });
+                }
+              } catch (e) {
+                console.log(`[HTTP ${context.requestId}]   (Could not parse final buffer as JSON)`);
+              }
+            }
+          }
+
+          console.log(`[HTTP ${context.requestId}] === END RAW SSE STREAM ===`);
           console.log(`[HTTP ${context.requestId}] SSE stream complete. Total events: ${sseEventCount}`);
+
+          // If we got very few events, log all of them for debugging
+          if (sseEventCount <= 5) {
+            console.log(`[HTTP ${context.requestId}] Complete SSE event log (${sseEventCount} events):`);
+            allEvents.forEach((evt, idx) => {
+              console.log(`[HTTP ${context.requestId}] Event ${idx + 1}/${sseEventCount}:`, evt);
+            });
+          }
         } catch (e) {
           console.error(`[HTTP ${context.requestId}] Error reading SSE stream:`, e);
         }
