@@ -223,7 +223,6 @@ export async function* runAgentStream(ctx: AgentContext) {
 
         const allTools = { ...localTools, ...mcpTools };
 
-        // Apply intelligent truncation instead of fixed window
         const recentMessages = truncateMessages(messages, 30000); // ~7-8k tokens
 
         if (messages.length !== recentMessages.length) {
@@ -250,7 +249,6 @@ export async function* runAgentStream(ctx: AgentContext) {
             userLocale,
             formattedMemory
         );
-
 
         // Process template tags in system prompt
         const processedSystemPrompt = processTemplate(activity.systemPrompt, templateContext);
@@ -281,7 +279,7 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
         console.log('[Agent] Estimated prompt tokens:', estimatedPromptTokens, '(rough estimate)');
 
         if (estimatedPromptTokens > 1500) {
-          console.warn('[Agent] ⚠️  Large prompt detected! This may cause empty responses.');
+          console.warn('[Agent] Large prompt detected! This may cause empty responses.');
           console.warn('[Agent]     System prompt: ~', Math.ceil(enhancedSystemPrompt.length / 4), 'tokens');
           console.warn('[Agent]     Messages: ~', estimatedPromptTokens - Math.ceil(enhancedSystemPrompt.length / 4), 'tokens');
           console.warn('[Agent]     Tools:', Object.keys(allTools).length, 'tools');
@@ -365,7 +363,7 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
 
                         // Check if result contains an error message
                         if (resultStr.includes('Error executing tool') || resultStr.includes('Tool execution failed') || resultStr.includes('Error:')) {
-                            console.log(`[Agent] ℹ️  Tool ${tr.toolName} returned error - LLM will see this and may retry`);
+                            console.log(`[Agent]    Tool ${tr.toolName} returned error - LLM will see this and may retry`);
                         }
                     });
                 }
@@ -378,13 +376,6 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                         modelId: response.modelId,
                         timestamp: response.timestamp ? new Date(response.timestamp).toISOString() : undefined,
                     });
-                }
-
-                // Warn if step produced no text and finished
-                if (text.length === 0 && finishReason) {
-                    console.warn(`[Agent] ⚠️  Step finished with ZERO text! Finish reason: ${finishReason}`);
-                    console.warn('[Agent] This may indicate content filtering, safety blocks, or API issues');
-                    console.warn('[Agent] Request ID:', ctx.requestId);
                 }
             },
         });
@@ -429,16 +420,10 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                         experimental_providerMetadata: part.experimental_providerMetadata,
                     });
 
-                    // CRITICAL: Log if we got no content
+                    // Log if we got no content
                     if (!hasContent || totalTextLength === 0) {
-                        console.warn('[Agent] ⚠️  WARNING: LLM returned zero text content!');
-                        console.warn('[Agent] Finish reason:', part.finishReason);
+                        console.warn('[Agent] Zero len output, finish reason:', part.finishReason);
                         console.warn('[Agent] Request ID:', ctx.requestId);
-                        console.warn('[Agent] This indicates issues with system prompt, API, safety filters, or tools');
-                        console.warn('[Agent] Check HTTP logs above for status codes and response headers');
-
-                        // Log the FULL finish part for deep debugging
-                        console.warn('[Agent] Complete finish event:', JSON.stringify(part, null, 2));
 
                         // Surface empty response with technical details
                         const requestIdSuffix = ctx.requestId ? ` Request ID: ${ctx.requestId}` : '';
@@ -446,13 +431,6 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                             type: 'text-delta',
                             text: `\n\n_The AI model returned no content. Finish reason: ${part.finishReason}.${requestIdSuffix}_\n\n`
                         };
-                    }
-
-                    if (reasoningText) {
-                        console.log('[Agent] Total reasoning text length:', reasoningText.length);
-                        if (debugLLM) {
-                            console.log('[Agent] Complete reasoning text:', reasoningText);
-                        }
                     }
                 }
             }
@@ -467,10 +445,6 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
         }
 
         console.log('[Agent] Stream complete. Total characters:', charCount);
-        if (charCount === 0) {
-            console.error('[Agent] ❌ CRITICAL: Stream completed with ZERO characters output');
-            console.error('[Agent] Check logs above for provider errors, MCP tool failures, or prompt issues');
-        }
 
         // Send updated memory state back to client
         // Only send if memory tool was used and state has changed

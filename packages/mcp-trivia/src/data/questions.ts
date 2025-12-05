@@ -572,7 +572,7 @@ const questionData: QuestionSource[] = [
     {
         category: 'Building & Ecosystem',
         question: 'Why can Unicity be considered "Chain-Agnostic"?',
-        correctAnswer: 'Tokens can require proofs from any chain (Unicity, Ethereum, Solana) or trusted hardware',
+        correctAnswer: 'It can wrap assets from other chains (Unicity, Ethereum, Solana)',
         incorrectAnswers: ['It has no chain of its own', 'It ignores all other blockchains', 'It only works with Bitcoin']
     },
 
@@ -872,11 +872,11 @@ const questionData: QuestionSource[] = [
     {
         category: 'Science',
         question: 'In the context of generalized predicates, what does the solver function S_pr(sk, m) return if the predicate cannot be satisfied?',
-        correctAnswer: '⊥ (Bottom/Failure)',
+        correctAnswer: '⊥ (Bottom/Failure',
         incorrectAnswers: [
-            '0',
+            'Exception',
             'An empty string',
-            'A random nonce'
+            'A side effect'
         ]
     },
     {

@@ -59,10 +59,4 @@ Available tools:
 
     localTools: [],
 
-    theme: {
-        primaryColor: '#10b981', // Emerald
-        name: 'ama',
-    },
-
-    persistChatHistory: false,
 };
