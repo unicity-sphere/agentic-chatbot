@@ -40,7 +40,7 @@ Tool Usage Pattern:
 
     llm: {
         provider: 'gemini',
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-preview-09-2025',
         // Lower temperature for betting to ensure precision with numbers and logic
         temperature: 0.6,
     },

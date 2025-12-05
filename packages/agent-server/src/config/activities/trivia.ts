@@ -123,7 +123,7 @@ Important guidelines:
 
     llm: {
         provider: 'gemini',
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-preview-09-2025',
         temperature: 0.8,
     },
 
