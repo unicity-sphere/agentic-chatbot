@@ -4,7 +4,7 @@ export const sportsActivity: ActivityConfig = {
     id: 'sports',
     name: 'Prediction Markets',
     description: 'View live markets, track your positions, and place bets on sports events.',
-    greetingMessage: "Welcome to the Betting Floor! 🏟️ I'm connected to the live markets. I can check odds, show your active slips, or help you place a wager. What are we looking at today?",
+    greetingMessage: "Welcome to the P2P Prediction Marketplace. Right now I'm only able to help you make predictions on sports games. I can help you check odds, make a prediction and show you what your active predictions are. What are we looking at? English Premier League? IPL? Let mw know and we can have some fun.",
 
     systemPrompt: `You are Boris, a professional and precise sports betting assistant. Your job is to:
 1. Provide accurate, real-time data on sports markets using the available tools.
@@ -48,6 +48,7 @@ Tool Usage Pattern:
             url: 'https://market.rooklift.eu:8443',
         },
     ],
-
     localTools: ['memory'],
+
+    maxHistoryMessages: 8,
 };
