@@ -5,6 +5,7 @@ import { createMemoryTool, formatMemoryForPrompt, type ToolContext } from './too
 import { globalMcpManager } from './mcp/manager.js';
 import type { ActivityConfig, ChatMessage } from '@agentic/shared';
 import { processChunk, resetReferenceTracking, type ToolResult } from './references.js';
+import { toolResultsStore } from './tool-results-store.js';
 
 // Configuration for tool retry behavior
 const ENABLE_TOOL_RETRY = process.env.ENABLE_TOOL_RETRY !== 'false'; // Default: enabled
@@ -217,6 +218,9 @@ export async function* runAgentStream(ctx: AgentContext) {
         // Connect to MCP servers (reuses existing connections)
         let mcpTools = {};
 
+        // Calculate turn number (number of assistant messages + 1 for current turn)
+        const turnNumber = ctx.messages.filter(m => m.role === 'assistant').length + 1;
+
         // Only connect if MCP servers are configured
         if (activity.mcpServers.length > 0) {
             try {
@@ -224,9 +228,9 @@ export async function* runAgentStream(ctx: AgentContext) {
                 await globalMcpManager.connect(activity.mcpServers);
 
                 // Get tools only from servers configured for this activity
-                // Pass user metadata (IP, country) for geolocation-based features
+                // Pass user metadata (IP, country) for geolocation-based features and turn number for unique ref IDs
                 const allowedServerNames = activity.mcpServers.map(s => s.name);
-                mcpTools = await globalMcpManager.getTools(allowedServerNames, { userId, userIp, userCountry });
+                mcpTools = await globalMcpManager.getTools(allowedServerNames, { userId, userIp, userCountry, turnNumber });
                 console.log('[Agent] MCP tools loaded:', Object.keys(mcpTools));
             } catch (error) {
                 console.error('[Agent] ❌ CRITICAL: Failed to connect to MCP servers');
@@ -338,13 +342,13 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                 if (Array.isArray(msg.content)) {
                     msg.content.forEach((part, partIdx) => {
                         if (part.type === 'text') {
-                            console.log(`  [Part ${partIdx + 1}] Text: ${part.text.substring(0, 200)}${part.text.length > 200 ? '...' : ''}`);
+                            console.log(`  [Part ${partIdx + 1}] Text: ${part.text.substring(0, 2000)}${part.text.length > 2000 ? '...' : ''}`);
                         } else {
                             console.log(`  [Part ${partIdx + 1}] Type: ${part.type}`);
                         }
                     });
                 } else {
-                    console.log(`  Content: ${typeof msg.content === 'string' ? msg.content.substring(0, 200) : JSON.stringify(msg.content).substring(0, 200)}`);
+                    console.log(`  Content: ${typeof msg.content === 'string' ? msg.content.substring(0, 2000) : JSON.stringify(msg.content).substring(0, 2000)}`);
                 }
             });
         }
@@ -354,7 +358,19 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
 
         // Track tool results for reference processing
         const shouldProcessReferences = activity.processReferences === true;
-        const toolResultsMap = new Map<string, ToolResult>();
+
+        // Load tool results from server-side store
+        // This allows LLM to reference sources from earlier turns
+        const toolResultsMap = shouldProcessReferences
+            ? toolResultsStore.getToolResults(userId, activity.id)
+            : new Map<string, ToolResult>();
+
+        if (shouldProcessReferences && toolResultsMap.size > 0) {
+            console.log(`[Agent] Loaded ${toolResultsMap.size} tool results from session store`);
+        }
+
+        // Track new tool results from current turn
+        const currentTurnResults = new Map<string, ToolResult>();
 
         // Reset reference tracking for this message
         if (shouldProcessReferences) {
@@ -444,22 +460,26 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
 
                             // Single result with ID (fetch, json_fetch)
                             if (parsedResult.id) {
-                                toolResultsMap.set(parsedResult.id, {
+                                const toolResult = {
                                     id: parsedResult.id,
                                     url: parsedResult.url,
                                     title: parsedResult.title
-                                });
+                                };
+                                toolResultsMap.set(parsedResult.id, toolResult);
+                                currentTurnResults.set(parsedResult.id, toolResult);
                             }
 
                             // Multiple results (search)
                             if (parsedResult.results && Array.isArray(parsedResult.results)) {
                                 parsedResult.results.forEach((r: any) => {
                                     if (r.id) {
-                                        toolResultsMap.set(r.id, {
+                                        const toolResult = {
                                             id: r.id,
                                             url: r.url,
                                             title: r.title
-                                        });
+                                        };
+                                        toolResultsMap.set(r.id, toolResult);
+                                        currentTurnResults.set(r.id, toolResult);
                                     }
                                 });
                             }
@@ -575,6 +595,11 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                 type: 'memory-update',
                 memoryState,
             };
+        }
+
+        // Save current turn's tool results to server-side store
+        if (shouldProcessReferences && currentTurnResults.size > 0) {
+            toolResultsStore.addToolResults(userId, activity.id, currentTurnResults);
         }
 
         // Signal completion (keep MCP connections alive for reuse)

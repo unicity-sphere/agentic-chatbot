@@ -27,6 +27,25 @@ export function resetReferenceTracking() {
 }
 
 /**
+ * Sanitize title to prevent breaking markdown links and tooltips
+ */
+function sanitizeTitle(title: string): string {
+    return title
+        // Remove newlines and tabs
+        .replace(/[\n\r\t]/g, ' ')
+        // Remove markdown-breaking characters
+        .replace(/[\[\]()]/g, '')
+        // Escape/remove quotes that break tooltips
+        .replace(/["']/g, '')
+        // Collapse multiple spaces
+        .replace(/\s+/g, ' ')
+        // Trim whitespace
+        .trim()
+        // Truncate to reasonable length
+        .substring(0, 100);
+}
+
+/**
  * Converts 【ref:id】 to clickable link emoji with title tooltip
  */
 export function processChunk(text: string, toolResults: Map<string, ToolResult>): string {
@@ -58,8 +77,9 @@ export function processChunk(text: string, toolResults: Map<string, ToolResult>)
                     const result = toolResults.get(id);
 
                     if (result && result.url) {
-                        // Create clickable link emoji with title tooltip
-                        const title = result.title || extractDomain(result.url) || 'Source';
+                        // Create clickable link emoji with sanitized title tooltip
+                        const rawTitle = result.title || extractDomain(result.url) || 'Source';
+                        const title = sanitizeTitle(rawTitle);
                         output += `[🔗](${result.url} "${title}")`;
                     } else {
                         // ID not found, output as-is

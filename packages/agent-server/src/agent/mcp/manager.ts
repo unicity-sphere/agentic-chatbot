@@ -14,6 +14,7 @@ interface ToolContext {
     userId?: string;
     userIp?: string;
     userCountry?: string;
+    turnNumber?: number; // Turn number for unique reference IDs across conversation
 }
 
 // Helper function to create instructive error messages for the LLM
@@ -247,13 +248,47 @@ export class McpManager {
                                 console.log(`[MCP Debug] Result:`, JSON.stringify(processedContent, null, 2).substring(0, 500));
                             }
 
+                            // Make reference IDs unique across turns by adding turn number prefix
+                            // This ensures LLM can reference sources from previous turns
+                            const contentWithUniqueIds = processedContent.map((item: any) => {
+                                if (item.type === 'text' && context?.turnNumber) {
+                                    try {
+                                        const parsed = JSON.parse(item.text);
+                                        const turnPrefix = `t${context.turnNumber}`;
+
+                                        // Transform single result with ID (fetch, json_fetch)
+                                        if (parsed.id && typeof parsed.id === 'string') {
+                                            parsed.id = `${turnPrefix}_${parsed.id}`;
+                                        }
+
+                                        // Transform multiple results (search)
+                                        if (parsed.results && Array.isArray(parsed.results)) {
+                                            parsed.results = parsed.results.map((r: any) => {
+                                                if (r.id && typeof r.id === 'string') {
+                                                    return { ...r, id: `${turnPrefix}_${r.id}` };
+                                                }
+                                                return r;
+                                            });
+                                        }
+
+                                        return {
+                                            ...item,
+                                            text: JSON.stringify(parsed)
+                                        };
+                                    } catch (e) {
+                                        // Not JSON or parsing failed, return as-is
+                                        return item;
+                                    }
+                                }
+                                return item;
+                            });
+
                             // Enforce payload size limit
-                            const payloadSize = JSON.stringify(processedContent).length;
-                            const MAX_PAYLOAD_SIZE = 50 * 1024; // 50kb
+                            const payloadSize = JSON.stringify(contentWithUniqueIds).length;
+                            const MAX_PAYLOAD_SIZE = 1024 * 1024; // 1MB
 
                             if (payloadSize > MAX_PAYLOAD_SIZE) {
                                 console.error(`[MCP] Tool ${mcpTool.name} returned too much data: ${payloadSize} bytes (limit: ${MAX_PAYLOAD_SIZE})`);
-                                console.log(`[MCP] Returning payload size error to LLM so it can refine query`);
 
                                 // Return error instead of throwing so LLM can retry with refined query
                                 return [{
@@ -263,7 +298,7 @@ export class McpManager {
                                 }];
                             }
 
-                            return processedContent;
+                            return contentWithUniqueIds;
                         } catch (error) {
                             // Network errors, connection failures, etc.
                             console.error(`[MCP] Exception during tool execution: ${mcpTool.name}`);

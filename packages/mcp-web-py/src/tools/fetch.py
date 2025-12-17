@@ -12,7 +12,7 @@ class FetchInput(BaseModel):
     """Input schema for web fetch"""
     url: HttpUrl = Field(..., description="URL to fetch")
     format: Literal["markdown", "html", "text"] = Field("markdown", description="Output format")
-    max_length: int = Field(50000, le=100000, description="Maximum content length in characters")
+    max_length: int = Field(50000, le=1000000, description="Maximum content length in characters")
 
 
 async def fetch_tool(input: FetchInput) -> dict:
