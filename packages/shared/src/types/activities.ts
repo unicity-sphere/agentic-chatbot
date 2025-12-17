@@ -3,8 +3,9 @@ import { z } from 'zod';
 export const LLMConfigSchema = z.object({
     provider: z.enum(['gemini', 'openai-compatible']),
     model: z.string(),
-    baseUrl: z.string().optional(), // For OpenAI-compatible
-    apiKey: z.string().optional(),
+    // For OpenAI-compatible: supports single endpoint or array for failover
+    baseUrl: z.union([z.string(), z.array(z.string())]).optional(),
+    apiKey: z.union([z.string(), z.array(z.string())]).optional(),
     temperature: z.number().default(0.7),
 });
 
