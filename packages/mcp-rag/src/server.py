@@ -93,7 +93,8 @@ def reindex(directory: str) -> dict:
 
         coll.add(ids=ids, documents=documents, metadatas=metadatas)
         total_chunks += len(chunks)
-        ingested.append({"file": filename, "chunks": len(chunks)})
+        sizes = [len(c.text) for c in chunks]
+        ingested.append({"file": filename, "chunks": len(chunks), "sizes": sizes})
 
     return {"collection": coll, "files": len(ingested), "chunks": total_chunks, "details": ingested}
 
@@ -114,7 +115,10 @@ def startup_ingest():
     collection = result["collection"]
     print(f"[RAG] Indexed {result['files']} files, {result['chunks']} chunks", flush=True)
     for d in result["details"]:
-        print(f"[RAG]   {d['file']}: {d['chunks']} chunks", flush=True)
+        sizes = d.get("sizes", [])
+        avg = sum(sizes) // len(sizes) if sizes else 0
+        lo, hi = (min(sizes), max(sizes)) if sizes else (0, 0)
+        print(f"[RAG]   {d['file']}: {d['chunks']} chunks (avg {avg}, range {lo}-{hi} chars)", flush=True)
 
 
 # will be set by startup_ingest()

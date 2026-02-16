@@ -79,6 +79,36 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  kbbot:
+    build:
+      context: .
+      dockerfile: packages/kbbot/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      NETWORK: ${KBBOT_NETWORK:-testnet}
+      BOT_NAMETAG: ${KBBOT_NAMETAG:-kbbot}
+      KBBOT_LLM_API_KEY: ${KBBOT_LLM_API_KEY}
+      KBBOT_LLM_MODEL: ${KBBOT_LLM_MODEL:-gemini-3.0-flash}
+      KBBOT_LLM_BASE_URL: ${KBBOT_LLM_BASE_URL:-}
+      MCP_RAG_URL: http://mcp-rag:3003/mcp
+      MCP_WEB_URL: http://mcp-web:3002/mcp
+      DATA_DIR: /app/data
+      TOKENS_DIR: /app/tokens
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      WELCOME_DELAY_MS: ${KBBOT_WELCOME_DELAY_MS:-4000}
+      MAX_HISTORY_MESSAGES: ${KBBOT_MAX_HISTORY_MESSAGES:-20}
+    volumes:
+      - kbbot-data:/app/data
+      - kbbot-tokens:/app/tokens
+    depends_on:
+      mcp-rag:
+        condition: service_started
+      mcp-web:
+        condition: service_started
+    restart: unless-stopped
+
   # ui:
   #   build:
   #     context: .
@@ -93,3 +123,5 @@ services:
 volumes:
   trivia-data:
   rag-chromadb:
+  kbbot-data:
+  kbbot-tokens:
