@@ -1,7 +1,7 @@
 # Unicity Glossary
 
 ## Agent
-**Agent** is an “active” *Asset* in Unicity. It generally represents a program or another similar entity. Agents may communicate with each other and the rest of the world off-chain, but they post cryptographic commitments of their state on-chain so that other Agents can verify their claims about their state, particularly the uniqueness of the state. The latter ensures that an Agent can’t claim one state to one party and simultaneously another state to another party. Unicity Agents can be developed using the Agent SDK (in development).
+**Agent** is an “active” *Asset* in Unicity. It generally represents a program or another similar entity. Agents may communicate with each other and the rest of the world off-chain, but they post cryptographic commitments of their state on-chain so that other Agents can verify their claims about their state, particularly the uniqueness of the state. The latter ensures that an Agent can’t claim one state to one party and simultaneously another state to another party. Unicity Agents can be developed using the [Sphere SDK](https://github.com/unicitynetwork/sphere-sdk).
 
 ## Aggregation Layer
 **Aggregation Layer**, also known as the Uniqueness Oracle, maintains the system state, accepts updates from the *Execution Layer*, commits cryptographic summaries of the system state, along with *Consistency Proofs*, to the *Consensus Layer*, and provides *Inclusion* and *Exclusion* proofs to the *Execution Layer*. Unicity’s Aggregation Layer is implemented as a *Sparse Merkle Tree*.
@@ -85,7 +85,7 @@
 **RandomX** is a CPU-optimized hashing algorithm, resistant to GPU-based optimizations and ASIC-based implementations, ensuring fair mining participation.
 
 ## Software Development Kit
-**Software Development Kit** (**SDK**) - tools provided for developers to build on Unicity. The State Transition SDK is for manipulating tokens, and the Agent SDK (under development) is for building decentralized applications.
+**Software Development Kit** (**SDK**) - tools provided for developers to build on Unicity. The State Transition SDK is for manipulating tokens, and the [Sphere SDK](https://github.com/unicitynetwork/sphere-sdk) is for building decentralized applications.
 
 ## Sparse Merkle Tree
 **Sparse Merkle Tree** (**SMT**) is an authenticated data structure for managing a dictionary of key-value pairs. It is a specialized form of hash tree that supports issuing both *Inclusion* and *Exclusion* proofs about its contents. In Unicity’s *Aggregation Layer* (also known as Uniqueness Oracle), the hash of the previous state of an *Asset* (including its *Owner Predicate*) is the key and an *Authenticator* of the new state is the value of each entry in the dictionary. Since the dictionary is append-only (new entries can be added to it, but no existing entries can be removed or changed), each *Asset* state can only be spent once.
