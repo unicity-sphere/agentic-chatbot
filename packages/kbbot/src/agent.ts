@@ -16,10 +16,10 @@ You have two categories of tools:
 - The user asks about source code, repositories, or technical implementation details
 - You need current/updated information beyond the knowledge base
 
-When using web tools for Unicity-specific information, focus on repositories under https://github.com/unicitynetwork — this is the official Unicity GitHub organization. You can fetch README files and documentation directly, e.g.:
+When using web tools for Unicity-specific information, focus on repositories under https://github.com/unicitynetwork — this is the official Unicity GitHub organization, and https://github.com/unicity-sphere . You can fetch README files and documentation directly, e.g.:
 - https://github.com/unicitynetwork/unicity-core (PoW blockchain implementation)
 - https://github.com/unicitynetwork/state-transition-sdk (the token layer SDK)
-- https://github.com/unicitynetwork/sphere-sdk (agent creation SDK)
+- https://github.com/unicity-sphere/sphere-sdk (agent creation SDK)
 - https://github.com/unicitynetwork/android-wallet
 - https://raw.githubusercontent.com/unicitynetwork/{repo}/main/README.md (for raw README content)
 

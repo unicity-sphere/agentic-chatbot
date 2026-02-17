@@ -919,8 +919,7 @@ constraints.
 
 ### The Agentic Runtime Architecture
 
-To enable this mobility, agents operate within a standardized **Agentic
-Runtime**. This runtime acts as an abstraction layer, sandwiching the
+To enable this mobility, agents operate within a standardized **Agentic Runtime**. This runtime acts as an abstraction layer, sandwiching the
 agent between the raw infrastructure and the Unicity network.
 
 1.  **Executable instance (the agent):** Technically, an agent is a
