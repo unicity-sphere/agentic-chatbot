@@ -1,10 +1,10 @@
-"""Web Fetch Tool using trafilatura and readability"""
+"""Web Fetch Tool using curl_cffi + trafilatura/readability"""
 from typing import Literal
 from pydantic import BaseModel, Field, HttpUrl
 import trafilatura
 from readability import Document
 import html2text
-import requests
+from curl_cffi.requests import AsyncSession, RequestsError
 
 
 class FetchInput(BaseModel):
@@ -18,56 +18,43 @@ async def fetch_tool(input: FetchInput) -> dict:
     """
     Fetch and extract clean content from web pages.
 
-    Uses trafilatura (F1: 0.958) as primary extraction method, with
-    readability-lxml as fallback. Supports markdown, HTML, and plain text output.
+    Uses curl_cffi with Chrome TLS impersonation to avoid bot detection.
+    trafilatura (F1: 0.958) as primary extraction, readability-lxml as fallback.
     """
     try:
-        print(f"[Fetch] URL: {input.url}, Format: {input.format}")
+        print(f"[Fetch] URL: {input.url}, Format: {input.format}", flush=True)
 
-        # Fetch HTML - try with SSL verification first, then without if it fails
-        # Use realistic browser headers to avoid bot detection
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-        }
+        # Fetch HTML using curl_cffi with browser impersonation
+        async with AsyncSession() as session:
+            try:
+                response = await session.get(
+                    str(input.url),
+                    impersonate="chrome",
+                    timeout=15,
+                )
+            except RequestsError as e:
+                err_str = str(e).lower()
+                if "ssl" in err_str or "certificate" in err_str or "tls" in err_str:
+                    print(f"[Fetch] SSL error, retrying without verification: {e}", flush=True)
+                    response = await session.get(
+                        str(input.url),
+                        impersonate="chrome",
+                        timeout=15,
+                        verify=False,
+                    )
+                else:
+                    raise
 
-        try:
-            response = requests.get(
-                str(input.url),
-                headers=headers,
-                timeout=10,
-                verify=True
-            )
-        except requests.exceptions.SSLError as ssl_error:
-            print(f"[Fetch] SSL verification failed, retrying without verification: {ssl_error}")
-            import warnings
-            warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-            response = requests.get(
-                str(input.url),
-                headers=headers,
-                timeout=10,
-                verify=False  # Disable SSL verification for problematic sites
-            )
-
-        # Check for HTTP errors - return immediately without processing body
+        # Check for HTTP errors
         if response.status_code >= 400:
-            error_message = response.reason
-            # Check for error message in common headers
-            if 'X-Error-Message' in response.headers:
-                error_message = response.headers['X-Error-Message']
-            elif 'X-Error' in response.headers:
-                error_message = response.headers['X-Error']
+            error_message = response.reason if hasattr(response, 'reason') else "Error"
+            headers = dict(response.headers) if hasattr(response, 'headers') else {}
+            if 'X-Error-Message' in headers:
+                error_message = headers['X-Error-Message']
+            elif 'X-Error' in headers:
+                error_message = headers['X-Error']
 
-            print(f"[Fetch] HTTP Error {response.status_code}: {error_message}")
+            print(f"[Fetch] HTTP Error {response.status_code}: {error_message}", flush=True)
             return {
                 "error": f"HTTP {response.status_code}: {error_message}",
                 "status_code": response.status_code,
@@ -86,18 +73,14 @@ async def fetch_tool(input: FetchInput) -> dict:
         )
 
         if content:
-            # Extract metadata
             metadata = trafilatura.extract_metadata(html)
             title = metadata.title if metadata and metadata.title else "Untitled"
             author = metadata.author if metadata and metadata.author else None
 
-            # Convert to requested format
             if input.format == "markdown":
-                # trafilatura can output markdown directly, but html2text gives better formatting
                 h = html2text.HTML2Text()
                 h.ignore_links = False
-                h.body_width = 0  # Don't wrap lines
-                # First get HTML from trafilatura with better structure
+                h.body_width = 0
                 html_content = trafilatura.extract(html, include_comments=False, include_tables=True, output_format="xml")
                 if html_content:
                     content = h.handle(html_content)
@@ -106,11 +89,11 @@ async def fetch_tool(input: FetchInput) -> dict:
             elif input.format == "text":
                 content = trafilatura.extract(html, no_fallback=False, output_format="txt")
 
-            print(f"[Fetch] Extracted {len(content)} chars using trafilatura")
+            print(f"[Fetch] Extracted {len(content)} chars using trafilatura", flush=True)
 
         else:
             # Fallback to readability
-            print("[Fetch] Trafilatura failed, falling back to readability")
+            print("[Fetch] Trafilatura failed, falling back to readability", flush=True)
             doc = Document(html)
             title = doc.title()
             content_html = doc.summary()
@@ -122,7 +105,6 @@ async def fetch_tool(input: FetchInput) -> dict:
                 h.body_width = 0
                 content = h.handle(content_html)
             elif input.format == "text":
-                # Strip HTML tags for text
                 h = html2text.HTML2Text()
                 h.ignore_links = True
                 h.ignore_images = True
@@ -130,12 +112,12 @@ async def fetch_tool(input: FetchInput) -> dict:
             else:  # html
                 content = content_html
 
-            print(f"[Fetch] Extracted {len(content)} chars using readability")
+            print(f"[Fetch] Extracted {len(content)} chars using readability", flush=True)
 
         # Truncate if needed
         if len(content) > input.max_length:
             content = content[:input.max_length] + "\n\n[Content truncated...]"
-            print(f"[Fetch] Truncated to {input.max_length} chars")
+            print(f"[Fetch] Truncated to {input.max_length} chars", flush=True)
 
         return {
             "url": str(input.url),
@@ -147,9 +129,9 @@ async def fetch_tool(input: FetchInput) -> dict:
             "format": input.format
         }
 
-    except requests.exceptions.RequestException as e:
+    except RequestsError as e:
         error_msg = f"HTTP request failed: {str(e)}"
-        print(f"[Fetch] Error: {error_msg}")
+        print(f"[Fetch] Error: {error_msg}", flush=True)
         return {
             "error": error_msg,
             "url": str(input.url),
@@ -157,7 +139,7 @@ async def fetch_tool(input: FetchInput) -> dict:
         }
     except Exception as e:
         error_msg = str(e)
-        print(f"[Fetch] Error: {error_msg}")
+        print(f"[Fetch] Error: {error_msg}", flush=True)
         return {
             "error": error_msg,
             "url": str(input.url),

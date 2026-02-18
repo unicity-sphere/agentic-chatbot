@@ -32,6 +32,8 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
+      SEARXNG_URL: ${SEARXNG_URL:-http://localhost:8888}
+      SEARXNG_KEY: ${SEARXNG_KEY:-}
     restart: unless-stopped
 
   mcp-rag:
@@ -109,6 +111,34 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  viktor:
+    build:
+      context: .
+      dockerfile: packages/viktor/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      NETWORK: ${VIKTOR_NETWORK:-testnet}
+      BOT_NAMETAG: ${VIKTOR_NAMETAG:-viktor}
+      VIKTOR_LLM_API_KEY: ${VIKTOR_LLM_API_KEY:-}
+      VIKTOR_LLM_MODEL: ${VIKTOR_LLM_MODEL:-gpt-oss}
+      VIKTOR_LLM_BASE_URL: ${VIKTOR_LLM_BASE_URL:-}
+      MCP_RAG_URL: http://mcp-rag:3003/mcp
+      MCP_WEB_URL: http://mcp-web:3002/mcp
+      DATA_DIR: /app/data
+      TOKENS_DIR: /app/tokens
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    volumes:
+      - viktor-data:/app/data
+      - viktor-tokens:/app/tokens
+    depends_on:
+      mcp-rag:
+        condition: service_started
+      mcp-web:
+        condition: service_started
+    restart: unless-stopped
+
   # ui:
   #   build:
   #     context: .
@@ -125,3 +155,5 @@ volumes:
   rag-chromadb:
   kbbot-data:
   kbbot-tokens:
+  viktor-data:
+  viktor-tokens:

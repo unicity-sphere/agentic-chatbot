@@ -1,25 +1,25 @@
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
 import type { ModelMessage } from 'ai';
-import type { KBBotConfig } from './config.js';
-import type { KBBotAgent } from './agent.js';
+import type { SphereBotConfig } from './types.js';
+import type { SphereBotAgent } from './agent.js';
 
-const WELCOME_MESSAGE = `Hey! I'm KBBot, the Unicity knowledge base assistant. Ask me anything about Unicity, AgentSphere, Sphere wallet, or agentic commerce.`;
-
-export class KBBot {
+export class SphereBot {
   private sphere: Sphere | null = null;
-  private config: KBBotConfig;
-  private agent: KBBotAgent;
+  private config: SphereBotConfig;
+  private agent: SphereBotAgent;
   private conversations: Map<string, ModelMessage[]> = new Map();
   private pendingWelcomes: Set<string> = new Set();
+  private prefix: string;
 
-  constructor(config: KBBotConfig, agent: KBBotAgent) {
+  constructor(config: SphereBotConfig, agent: SphereBotAgent) {
     this.config = config;
     this.agent = agent;
+    this.prefix = `[Bot:${config.name}]`;
   }
 
   async start(): Promise<void> {
-    console.log('[Bot] Starting KBBot...');
+    console.log(`${this.prefix} Starting...`);
 
     const providers = createNodeProviders({
       network: this.config.network,
@@ -30,31 +30,31 @@ export class KBBot {
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,
       autoGenerate: true,
-      nametag: this.config.botNametag,
+      nametag: this.config.nametag,
     });
 
     this.sphere = sphere;
 
     if (created) {
-      console.log('[Bot] Created new wallet');
+      console.log(`${this.prefix} Created new wallet`);
       if (generatedMnemonic) {
-        console.log('[Bot] WARNING: Back up this mnemonic:', generatedMnemonic);
+        console.log(`${this.prefix} WARNING: Back up this mnemonic:`, generatedMnemonic);
       }
     } else {
-      console.log('[Bot] Loaded existing wallet');
+      console.log(`${this.prefix} Loaded existing wallet`);
     }
 
     const identity = sphere.identity!;
-    console.log(`[Bot] Nametag: @${identity.nametag}`);
-    console.log(`[Bot] Direct address: ${identity.directAddress}`);
-    console.log(`[Bot] Chain pubkey: ${identity.chainPubkey}`);
+    console.log(`${this.prefix} Nametag: @${identity.nametag}`);
+    console.log(`${this.prefix} Direct address: ${identity.directAddress}`);
+    console.log(`${this.prefix} Chain pubkey: ${identity.chainPubkey}`);
 
     // Listen for incoming DMs
     sphere.communications.onDirectMessage(async (message) => {
       // Ignore our own messages
       if (message.senderPubkey === identity.chainPubkey) return;
 
-      console.log(`[Bot] DM from ${message.senderNametag || message.senderPubkey.slice(0, 12)}...: ${message.content.slice(0, 100)}`);
+      console.log(`${this.prefix} DM from ${message.senderNametag || message.senderPubkey.slice(0, 12)}...: ${message.content.slice(0, 100)}`);
 
       try {
         // Send composing indicators periodically while generating
@@ -74,7 +74,7 @@ export class KBBot {
         } finally {
           clearInterval(composingInterval);
         }
-        console.log(`[Bot] Response (${response.length} chars): ${response.slice(0, 200)}`);
+        console.log(`${this.prefix} Response (${response.length} chars): ${response.slice(0, 200)}`);
 
         // Update history
         this.addToHistory(message.senderPubkey, 'user', message.content);
@@ -82,46 +82,49 @@ export class KBBot {
 
         // Send response
         const sent = await sphere.communications.sendDM(message.senderPubkey, response);
-        console.log(`[Bot] Replied to ${message.senderNametag || message.senderPubkey.slice(0, 12)}..., msgId=${sent.id}`);
+        console.log(`${this.prefix} Replied to ${message.senderNametag || message.senderPubkey.slice(0, 12)}..., msgId=${sent.id}`);
       } catch (error) {
-        console.error('[Bot] Error handling DM:', error);
+        console.error(`${this.prefix} Error handling DM:`, error);
         try {
           await sphere.communications.sendDM(
             message.senderPubkey,
             "Sorry, I encountered an error. Please try again."
           );
         } catch (sendError) {
-          console.error('[Bot] Failed to send error reply:', sendError);
+          console.error(`${this.prefix} Failed to send error reply:`, sendError);
         }
       }
     });
 
-    console.log('[Bot] Listening for DMs');
+    console.log(`${this.prefix} Listening for DMs`);
   }
 
   async notifyNewUser(pubkey: string, nametag?: string): Promise<void> {
+    if (!this.config.welcomeMessage) return;
+
     if (!this.sphere) {
-      console.warn('[Bot] Not ready, ignoring notify');
+      console.warn(`${this.prefix} Not ready, ignoring notify`);
       return;
     }
 
     // Deduplicate: skip if we already have a pending welcome for this pubkey
     if (this.pendingWelcomes.has(pubkey)) {
-      console.log(`[Bot] Welcome already pending for ${pubkey.slice(0, 12)}...`);
+      console.log(`${this.prefix} Welcome already pending for ${pubkey.slice(0, 12)}...`);
       return;
     }
 
     this.pendingWelcomes.add(pubkey);
     const label = nametag ? `@${nametag}` : pubkey.slice(0, 12) + '...';
-    console.log(`[Bot] Scheduling welcome DM to ${label} in ${this.config.welcomeDelayMs}ms`);
+    console.log(`${this.prefix} Scheduling welcome DM to ${label} in ${this.config.welcomeDelayMs}ms`);
 
+    const welcomeMessage = this.config.welcomeMessage;
     setTimeout(async () => {
       this.pendingWelcomes.delete(pubkey);
       try {
-        await this.sphere!.communications.sendDM(pubkey, WELCOME_MESSAGE);
-        console.log(`[Bot] Sent welcome DM to ${label}`);
+        await this.sphere!.communications.sendDM(pubkey, welcomeMessage);
+        console.log(`${this.prefix} Sent welcome DM to ${label}`);
       } catch (error) {
-        console.error(`[Bot] Failed to send welcome DM to ${label}:`, error);
+        console.error(`${this.prefix} Failed to send welcome DM to ${label}:`, error);
       }
     }, this.config.welcomeDelayMs);
   }
@@ -134,7 +137,7 @@ export class KBBot {
     if (this.sphere) {
       await this.sphere.destroy();
       this.sphere = null;
-      console.log('[Bot] Destroyed');
+      console.log(`${this.prefix} Destroyed`);
     }
   }
 

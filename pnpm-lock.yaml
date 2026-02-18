@@ -51,37 +51,13 @@ importers:
 
   packages/kbbot:
     dependencies:
-      '@ai-sdk/google':
-        specifier: ^3.0.29
-        version: 3.0.29(zod@3.25.76)
-      '@hono/node-server':
-        specifier: ^1.19.9
-        version: 1.19.9(hono@4.11.9)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.26.0
-        version: 1.26.0(zod@3.25.76)
-      '@unicitylabs/sphere-sdk':
-        specifier: ^0.4.3
-        version: 0.4.3(react-native@0.84.0(@babel/core@7.28.5)(react@18.3.1))(ws@8.18.3)
-      ai:
-        specifier: ^6.0.90
-        version: 6.0.90(zod@3.25.76)
-      hono:
-        specifier: ^4.11.9
-        version: 4.11.9
-      ws:
-        specifier: ^8.18.0
-        version: 8.18.3
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
+      '@agentic/sphere-bot':
+        specifier: workspace:*
+        version: link:../sphere-bot
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.11
-      '@types/ws':
-        specifier: ^8.18.0
-        version: 8.18.1
       tsx:
         specifier: ^4.19.0
         version: 4.20.6
@@ -128,6 +104,46 @@ importers:
     devDependencies:
       typescript:
         specifier: ^5.4.0
+        version: 5.9.3
+
+  packages/sphere-bot:
+    dependencies:
+      '@ai-sdk/google':
+        specifier: ^3.0.29
+        version: 3.0.29(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^2.0.30
+        version: 2.0.30(zod@3.25.76)
+      '@hono/node-server':
+        specifier: ^1.19.9
+        version: 1.19.9(hono@4.11.9)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.26.0
+        version: 1.26.0(zod@3.25.76)
+      '@unicitylabs/sphere-sdk':
+        specifier: ^0.4.3
+        version: 0.4.3(react-native@0.84.0(@babel/core@7.28.5)(react@18.3.1))(ws@8.18.3)
+      ai:
+        specifier: ^6.0.90
+        version: 6.0.90(zod@3.25.76)
+      hono:
+        specifier: ^4.11.9
+        version: 4.11.9
+      ws:
+        specifier: ^8.18.0
+        version: 8.18.3
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.11
+      '@types/ws':
+        specifier: ^8.18.0
+        version: 8.18.1
+      typescript:
+        specifier: ^5.7.0
         version: 5.9.3
 
   packages/ui:
@@ -181,6 +197,22 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@22.19.11)(jiti@1.21.7)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
+
+  packages/viktor:
+    dependencies:
+      '@agentic/sphere-bot':
+        specifier: workspace:*
+        version: link:../sphere-bot
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.11
+      tsx:
+        specifier: ^4.19.0
+        version: 4.20.6
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
 packages:
 

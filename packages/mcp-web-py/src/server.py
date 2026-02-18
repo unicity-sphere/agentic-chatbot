@@ -31,7 +31,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="search",
-            description="Search the web using DDGS metasearch library. Searches multiple backends (DuckDuckGo, Bing, Brave, Google) in parallel when backend='auto', providing reliable and comprehensive results.",
+            description="Search the web using SearXNG metasearch (primary) with DDGS as fallback. In 'auto' mode, tries SearXNG first and falls back to DDGS on failure.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -53,9 +53,10 @@ async def list_tools() -> list[Tool]:
                         "enum": ["us-en", "uk-en", "wt-wt"],
                         "default": "wt-wt"
                     },
-                    "backend": {
+                    "source": {
                         "type": "string",
-                        "description": "Search backend (auto for parallel metasearch, or specific: duckduckgo, bing, brave, google)",
+                        "description": "Search source: auto (SearXNG with DDGS fallback), searxng, or ddgs",
+                        "enum": ["auto", "searxng", "ddgs"],
                         "default": "auto"
                     }
                 },
@@ -128,7 +129,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 query=arguments["query"],
                 max_results=arguments.get("max_results", 10),
                 region=arguments.get("region", "wt-wt"),
-                backend=arguments.get("backend", "auto")
+                source=arguments.get("source", "auto")
             )
             result = await search_tool(input_data)
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
@@ -254,7 +255,7 @@ async def handle_messages(request: Request):
                 },
                 "serverInfo": {
                     "name": "web",
-                    "version": "1.0.0"
+                    "version": "1.1.0"
                 }
             })
 
@@ -330,11 +331,14 @@ def main():
     """Main entry point"""
     port = int(os.environ.get("PORT", 3002))
 
-    print(f"Starting MCP Web Server on port {port}...", flush=True)
+    from src.tools.search import SEARXNG_URL, SEARXNG_KEY
+
+    print(f"Starting MCP Web Server v1.1.0 on port {port}...", flush=True)
     print("Available tools:", flush=True)
-    print("  - search: Web search using DDGS metasearch", flush=True)
-    print("  - fetch: Extract clean content from web pages", flush=True)
-    print("  - json_fetch: Fetch JSON from APIs", flush=True)
+    key_status = "key configured" if SEARXNG_KEY else "no key"
+    print(f"  - search: SearXNG ({SEARXNG_URL}, {key_status}) + DDGS fallback", flush=True)
+    print("  - fetch: Extract clean content from web pages (curl_cffi)", flush=True)
+    print("  - json_fetch: Fetch JSON from APIs (curl_cffi)", flush=True)
     print(f"\nHTTP endpoint: http://0.0.0.0:{port}/mcp", flush=True)
 
     uvicorn.run(

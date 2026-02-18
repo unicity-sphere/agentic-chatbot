@@ -13,6 +13,11 @@ interface McpServer {
 
 export class McpToolManager {
   private servers: McpServer[] = [];
+  private clientPrefix: string;
+
+  constructor(clientPrefix: string) {
+    this.clientPrefix = clientPrefix;
+  }
 
   /** Register an MCP server. Connection is lazy — happens on first getTools(). */
   addServer(name: string, url: string): void {
@@ -43,7 +48,6 @@ export class McpToolManager {
       const client = server.client;
 
       for (const mcpTool of result.tools) {
-        // Prefix tool names with server name to avoid collisions
         const toolName = `${server.name}_${mcpTool.name}`;
 
         tools[toolName] = tool({
@@ -71,14 +75,12 @@ export class McpToolManager {
               try {
                 const parsed = JSON.parse(resultText);
                 if (Array.isArray(parsed?.results)) {
-                  // RAG search results
                   console.log(`[MCP:${server.name}] ${mcpTool.name} → ${parsed.results.length} results`);
                   for (const r of parsed.results.slice(0, 5)) {
                     const preview = (r.content || r.text || '').slice(0, 200).replace(/\n/g, ' ');
                     console.log(`  - [${(r.score ?? r.relevance ?? '').toString().slice(0, 5)}] ${r.source || r.title || r.id || '?'}: ${preview}`);
                   }
                 } else if (parsed?.content) {
-                  // Web fetch result
                   console.log(`[MCP:${server.name}] ${mcpTool.name} → ${parsed.title || parsed.url || '?'} (${(parsed.content || '').length} chars): ${(parsed.content || '').slice(0, 200).replace(/\n/g, ' ')}`);
                 } else if (Array.isArray(parsed)) {
                   console.log(`[MCP:${server.name}] ${mcpTool.name} → ${parsed.length} items`);
@@ -122,7 +124,7 @@ export class McpToolManager {
 
     server.connecting = (async () => {
       try {
-        const client = new Client({ name: `kbbot-${server.name}`, version: '1.0.0' });
+        const client = new Client({ name: `${this.clientPrefix}-${server.name}`, version: '1.0.0' });
         const transport = new StreamableHTTPClientTransport(new URL(server.url));
         await client.connect(transport);
         server.client = client;

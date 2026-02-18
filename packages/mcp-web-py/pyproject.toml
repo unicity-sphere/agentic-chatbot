@@ -1,6 +1,6 @@
 [project]
 name = "mcp-web-py"
-version = "1.0.0"
+version = "1.1.0"
 description = "Python MCP server for web search, fetch, and JSON operations"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "trafilatura>=1.12.2",
     "readability-lxml>=0.8.1",
     "requests>=2.32.0",
+    "curl_cffi>=0.7.0",
     "html2text>=2024.2.26",
     "pydantic>=2.0.0",
 ]

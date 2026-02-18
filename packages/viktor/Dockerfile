@@ -4,15 +4,15 @@ RUN corepack enable pnpm
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/sphere-bot/package.json ./packages/sphere-bot/
-COPY packages/kbbot/package.json ./packages/kbbot/
+COPY packages/viktor/package.json ./packages/viktor/
 
 RUN pnpm install --frozen-lockfile
 
 COPY packages/sphere-bot ./packages/sphere-bot
 RUN pnpm --filter @agentic/sphere-bot build
 
-COPY packages/kbbot ./packages/kbbot
-RUN pnpm --filter @agentic/kbbot build
+COPY packages/viktor ./packages/viktor
+RUN pnpm --filter @agentic/viktor build
 
 FROM node:20-alpine
 WORKDIR /app
@@ -27,13 +27,13 @@ COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /app/packages/sphere-bot/dist ./packages/sphere-bot/dist
 COPY --from=builder /app/packages/sphere-bot/package.json ./packages/sphere-bot/package.json
 
-# Copy kbbot built files
-COPY --from=builder /app/packages/kbbot/dist ./packages/kbbot/dist
-COPY --from=builder /app/packages/kbbot/package.json ./packages/kbbot/package.json
+# Copy viktor built files
+COPY --from=builder /app/packages/viktor/dist ./packages/viktor/dist
+COPY --from=builder /app/packages/viktor/package.json ./packages/viktor/package.json
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod --filter @agentic/kbbot...
+RUN pnpm install --frozen-lockfile --prod --filter @agentic/viktor...
 
-WORKDIR /app/packages/kbbot
-EXPOSE 3004
+WORKDIR /app/packages/viktor
+EXPOSE 3005
 CMD ["pnpm", "start"]

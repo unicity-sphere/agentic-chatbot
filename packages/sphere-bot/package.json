@@ -1,0 +1,26 @@
+{
+  "name": "@agentic/sphere-bot",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.29",
+    "@ai-sdk/openai-compatible": "^2.0.30",
+    "@hono/node-server": "^1.19.9",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@unicitylabs/sphere-sdk": "^0.4.3",
+    "ai": "^6.0.90",
+    "hono": "^4.11.9",
+    "ws": "^8.18.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.0",
+    "typescript": "^5.7.0"
+  }
+}
