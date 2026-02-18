@@ -131,7 +131,7 @@ export function createLLMProvider(config: LLMConfig, context?: { requestId?: str
                     fetch: customFetch,
                     // fetch: context ? createLoggingFetch(context) : undefined,
                 });
-                const model = provider(config.model);
+                const model = provider.chatModel(config.model);
                 return model;
             } catch (error) {
                 console.error('[Provider] Failed to create OpenAI-compatible provider:', error);

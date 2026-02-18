@@ -1,4 +1,4 @@
-import { streamText, type CoreMessage } from 'ai';
+import { streamText, stepCountIs, type ModelMessage } from 'ai';
 import { createLLMProvider } from './llm/providers.js';
 import { processTemplate, buildTemplateContext } from './llm/prompt-templates.js';
 import { createMemoryTool, formatMemoryForPrompt, type ToolContext } from './tools/memory.js';
@@ -73,7 +73,7 @@ function getUserFriendlyError(error: unknown): string {
     return '_Something went wrong. Please try again or rephrase your request._';
 }
 
-function convertToCoreMessages(messages: ChatMessage[]): CoreMessage[] {
+function convertToModelMessages(messages: ChatMessage[]): ModelMessage[] {
     return messages
         .filter(msg => {
             // Filter out messages with no content or empty text
@@ -270,7 +270,7 @@ export async function* runAgentStream(ctx: AgentContext) {
         }
 
         // Convert messages to AI SDK format
-        const coreMessages = convertToCoreMessages(recentMessages);
+        const coreMessages = convertToModelMessages(recentMessages);
         console.log('[Agent] Processing', coreMessages.length, 'messages');
 
         // Format memory for prompt injection if memory tool is enabled
@@ -357,7 +357,7 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
             system: enhancedSystemPrompt,
             messages: coreMessages,
             tools: allTools,
-            maxSteps: 10, // Allow up to 10 tool calls
+            stopWhen: stepCountIs(10),
             onStepFinish: ({ toolCalls, toolResults, text, finishReason, response }) => {
                 // Log tool usage for debugging
                 if (toolCalls?.length) {
@@ -431,13 +431,13 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
             for await (const part of result.fullStream) {
                 if (part.type === 'text-delta') {
                     hasContent = true;
-                    totalTextLength += part.textDelta.length;
-                    charCount += part.textDelta.length;
-                    yield { type: 'text-delta', text: part.textDelta };
-                } else if (part.type === 'reasoning') {
+                    totalTextLength += part.text.length;
+                    charCount += part.text.length;
+                    yield { type: 'text-delta', text: part.text };
+                } else if (part.type === 'reasoning-delta') {
                     // Extended thinking models emit reasoning content
-                    reasoningText += part.textDelta;
-                    yield { type: 'reasoning', text: part.textDelta };
+                    reasoningText += part.text;
+                    yield { type: 'reasoning', text: part.text };
                 } else if (part.type === 'error') {
                     console.error('[Agent] Stream error:', part.error);
                     const requestIdSuffix = ctx.requestId ? ` Request ID: ${ctx.requestId}` : '';
@@ -452,15 +452,13 @@ IMPORTANT INSTRUCTIONS FOR MESSAGE HANDLING:
                     console.log('[Agent] Had content:', hasContent);
                     console.log('[Agent] Finish metadata:', {
                         finishReason: part.finishReason,
-                        usage: part.usage,
-                        experimental_providerMetadata: part.experimental_providerMetadata,
+                        totalUsage: part.totalUsage,
                     });
 
                     // Log detailed error info if finish reason is error
                     if (part.finishReason === 'error') {
                         console.error('[Agent] ❌ Stream finished with error');
                         console.error('[Agent] Full part object:', JSON.stringify(part, null, 2));
-                        console.error('[Agent] Provider metadata:', part.experimental_providerMetadata);
 
                         // Check for response in part object
                         if ((part as any).response) {

@@ -30,7 +30,7 @@ import type { ActivityConfig } from '@agentic/shared';
 
       llm: {
           provider: 'gemini',
-          model: 'gemini-2.5-flash-preview-09-2025',
+          model: 'gemini-3-flash-preview',
           temperature: 0.6,
       },
 

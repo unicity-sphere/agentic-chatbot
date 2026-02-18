@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { McpServerConfig } from '@agentic/shared';
-import { tool, type CoreTool } from 'ai';
+import { tool, type Tool } from 'ai';
 import { z } from 'zod';
 import { imageStore } from '../../store/image-store.js';
 
@@ -139,8 +139,8 @@ export class McpManager {
         this.connecting.clear();
     }
 
-    async getTools(serverNames: string[], context?: ToolContext): Promise<Record<string, CoreTool>> {
-        const tools: Record<string, CoreTool> = {};
+    async getTools(serverNames: string[], context?: ToolContext): Promise<Record<string, Tool>> {
+        const tools: Record<string, Tool> = {};
         const allowedServers = new Set(serverNames);
 
         for (const [serverName, { client }] of this.connections) {
@@ -175,7 +175,7 @@ export class McpManager {
                 // Convert MCP tool to AI SDK tool
                 tools[toolName] = tool({
                     description: mcpTool.description || '',
-                    parameters: this.jsonSchemaToZod(mcpTool.inputSchema),
+                    inputSchema: this.jsonSchemaToZod(mcpTool.inputSchema),
                     execute: async (args) => {
                         console.log(`[MCP] Executing tool: ${mcpTool.name} on server: ${serverName}`);
 

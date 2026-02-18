@@ -1,13 +1,13 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { tool, type CoreTool } from 'ai';
+import { tool, type Tool } from 'ai';
 import { z } from 'zod';
 
 interface McpServer {
   name: string;
   url: string;
   client: Client | null;
-  cachedTools: Record<string, CoreTool> | null;
+  cachedTools: Record<string, Tool> | null;
   connecting: Promise<void> | null;
 }
 
@@ -20,8 +20,8 @@ export class McpToolManager {
   }
 
   /** Get all tools from all registered servers, connecting lazily as needed. */
-  async getTools(): Promise<Record<string, CoreTool>> {
-    const allTools: Record<string, CoreTool> = {};
+  async getTools(): Promise<Record<string, Tool>> {
+    const allTools: Record<string, Tool> = {};
 
     for (const server of this.servers) {
       const tools = await this.getServerTools(server);
@@ -31,7 +31,7 @@ export class McpToolManager {
     return allTools;
   }
 
-  private async getServerTools(server: McpServer): Promise<Record<string, CoreTool>> {
+  private async getServerTools(server: McpServer): Promise<Record<string, Tool>> {
     if (server.cachedTools) return server.cachedTools;
 
     const connected = await this.ensureConnected(server);
@@ -39,7 +39,7 @@ export class McpToolManager {
 
     try {
       const result = await server.client.listTools();
-      const tools: Record<string, CoreTool> = {};
+      const tools: Record<string, Tool> = {};
       const client = server.client;
 
       for (const mcpTool of result.tools) {
@@ -48,7 +48,7 @@ export class McpToolManager {
 
         tools[toolName] = tool({
           description: mcpTool.description || '',
-          parameters: this.jsonSchemaToZod(mcpTool.inputSchema),
+          inputSchema: this.jsonSchemaToZod(mcpTool.inputSchema),
           execute: async (args) => {
             console.log(`[MCP:${server.name}] ${mcpTool.name}`, JSON.stringify(args));
             try {

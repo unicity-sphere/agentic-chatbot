@@ -28,7 +28,7 @@ export function loadConfig(): KBBotConfig {
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     botNametag: process.env.BOT_NAMETAG || 'kbbot',
     llmApiKey,
-    llmModel: process.env.KBBOT_LLM_MODEL || 'gemini-2.0-flash',
+    llmModel: process.env.KBBOT_LLM_MODEL || 'gemini-3-flash-preview',
     llmBaseUrl: process.env.KBBOT_LLM_BASE_URL || undefined,
     mcpRagUrl: process.env.MCP_RAG_URL || 'http://mcp-rag:3003/mcp',
     mcpWebUrl: process.env.MCP_WEB_URL || 'http://mcp-web:3002/mcp',

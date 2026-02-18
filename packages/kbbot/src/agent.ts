@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { generateText, type CoreMessage } from 'ai';
+import { generateText, stepCountIs, type ModelMessage } from 'ai';
 import type { KBBotConfig } from './config.js';
 import type { McpToolManager } from './mcp-client.js';
 
@@ -34,7 +34,10 @@ When using web tools for Unicity-specific information, focus on repositories und
 - When mentioning features, explain how they work in practical terms.
 - Do not make up information. If you don't know something, say so.
 - Only use URLs returned by search tools or known Unicity GitHub URLs listed above.
-- Cite your sources.`;
+- Cite your sources.
+- Be efficient with tool calls. A typical workflow is: RAG search → (if needed) web search → (if needed) fetch ONE most relevant page → answer. Do NOT fetch multiple pages when one suffices.
+- Do NOT retry searches with rephrased queries if the first attempt returns no relevant results. If your search doesn't find the answer, say so honestly rather than trying more searches.
+- ALWAYS produce a text answer after receiving tool results. Never end your turn with only tool calls.`;
 
 export class KBBotAgent {
   private model: ReturnType<ReturnType<typeof createGoogleGenerativeAI>>;
@@ -47,11 +50,12 @@ export class KBBotAgent {
     });
     this.model = google(config.llmModel);
     this.toolManager = toolManager;
+    console.log(`[Agent] LLM model=${config.llmModel} baseUrl=${config.llmBaseUrl || '(default)'}`);
   }
 
-  async respond(userMessage: string, history: CoreMessage[]): Promise<string> {
+  async respond(userMessage: string, history: ModelMessage[]): Promise<string> {
     try {
-      const messages: CoreMessage[] = [
+      const messages: ModelMessage[] = [
         ...history,
         { role: 'user', content: userMessage },
       ];
@@ -70,7 +74,7 @@ export class KBBotAgent {
         system: SYSTEM_PROMPT,
         messages,
         tools,
-        maxSteps: 8,
+        stopWhen: stepCountIs(4),  // This is a balance - fail fast vs spend time web searching 
       });
 
       const lastStep = result.steps[result.steps.length - 1];
@@ -84,6 +88,12 @@ export class KBBotAgent {
 
       if (result.text) {
         return result.text;
+      }
+
+      // LLM exhausted tool-call steps without producing a text answer
+      if (lastStep?.finishReason === 'tool-calls') {
+        console.warn(`[Agent] Exhausted ${result.steps.length} steps on tool calls without text response`);
+        return "I searched the knowledge base but couldn't find relevant information on that topic. Could you rephrase your question, or ask about something else related to Unicity?";
       }
 
       console.warn('[Agent] Empty response, finishReason:', lastStep?.finishReason);

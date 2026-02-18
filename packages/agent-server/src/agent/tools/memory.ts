@@ -64,7 +64,7 @@ Actions:
 - set: Store a value with a key
 - list: Get all key-value pairs as structured data
 - pull: Get all preferences formatted as human-readable text for context`,
-        parameters: z.object({
+        inputSchema: z.object({
             action: z.enum(['get', 'set', 'list', 'pull']).describe('Action to perform'),
             key: z.string().optional().describe('Memory key (required for get/set)'),
             value: memoryValueSchema.optional().describe('Value to store (required for set)'),

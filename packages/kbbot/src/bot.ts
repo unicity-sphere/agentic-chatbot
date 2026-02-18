@@ -1,6 +1,6 @@
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
-import type { CoreMessage } from 'ai';
+import type { ModelMessage } from 'ai';
 import type { KBBotConfig } from './config.js';
 import type { KBBotAgent } from './agent.js';
 
@@ -10,7 +10,7 @@ export class KBBot {
   private sphere: Sphere | null = null;
   private config: KBBotConfig;
   private agent: KBBotAgent;
-  private conversations: Map<string, CoreMessage[]> = new Map();
+  private conversations: Map<string, ModelMessage[]> = new Map();
   private pendingWelcomes: Set<string> = new Set();
 
   constructor(config: KBBotConfig, agent: KBBotAgent) {
@@ -57,14 +57,23 @@ export class KBBot {
       console.log(`[Bot] DM from ${message.senderNametag || message.senderPubkey.slice(0, 12)}...: ${message.content.slice(0, 100)}`);
 
       try {
-        // Send composing indicator
-        await sphere.communications.sendComposingIndicator(message.senderPubkey).catch(() => {});
+        // Send composing indicators periodically while generating
+        // Frontend typing timeout is 1.5s, so send every 1s to keep dots visible
+        const sendComposing = () =>
+          sphere.communications.sendComposingIndicator(message.senderPubkey).catch(() => {});
+        await sendComposing();
+        const composingInterval = setInterval(sendComposing, 1000);
 
         // Get conversation history
         const history = this.getHistory(message.senderPubkey);
 
         // Generate response
-        const response = await this.agent.respond(message.content, history);
+        let response: string;
+        try {
+          response = await this.agent.respond(message.content, history);
+        } finally {
+          clearInterval(composingInterval);
+        }
         console.log(`[Bot] Response (${response.length} chars): ${response.slice(0, 200)}`);
 
         // Update history
@@ -129,7 +138,7 @@ export class KBBot {
     }
   }
 
-  private getHistory(pubkey: string): CoreMessage[] {
+  private getHistory(pubkey: string): ModelMessage[] {
     return this.conversations.get(pubkey) || [];
   }
 
