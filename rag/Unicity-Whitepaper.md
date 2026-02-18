@@ -308,7 +308,8 @@ for validation. Validation is the responsibility of the transaction's
 recipient -- the party with a direct interest in its validity -- who
 is also responsible for their own token storage.
 
-| **Layer**  |   **Responsibility** |  **Secured by** |  **Storage** |**Redundancy**|  **Effort**
+| **Layer**  |   **Responsibility** |  **Secured by** |  **Storage** |**Redundancy**|  **Effort** |
+|---|---|---|---|---|---|
 | Consensus: PoW & tokenomics | PoW      |     200 B/day |          PoW mining | Tokenomics |
 | Consensus: BFT | finality    |  $\uparrow$ |          100 B/day | $\approx21\times$ |
 | Uniqueness Oracle | consistency proofs | $\uparrow$ |           50 B/tx | Few replicas | Proof generation |

@@ -243,7 +243,7 @@ The first protocol is based on certified hardware. The starting point is once mo
 - In this case, a chain of offline transitions may continue either indefinitely or up to some limit defined by the risk management policy of the signing modules (indicated in the corresponding certificates).
 - Eventually some final payee X will be online. Then X's wallet can post all the offline transitions to online validators and replace the certificates of the signing modules with the inclusion proofs received from the validators.
 
-See a detailed description of the offline payments model here: [Unicity\\_Offline.pdf](https://drive.google.com/file/d/1eY3sYs_wpGehqzau-7M04mTU8TpaR_Bv/view?usp=sharing)
+See a detailed description of the offline payments model here: [Unicity_Offline.pdf](https://drive.google.com/file/d/1eY3sYs_wpGehqzau-7M04mTU8TpaR_Bv/view?usp=sharing)
 
 ### Recipient Checks
 
@@ -359,3 +359,71 @@ Figure: Transaction flow of a "traditional" blockchain
 ![](pic/_page_21_Picture_4.jpeg)
 
 Figure: Transaction flow in Unicity
+
+
+# Mining
+
+## How to start mining?
+
+Guide to set up mining in 5 minutes: https://github.com/unicitynetwork#how-to-start-mining-in-5-minutes
+
+## What mining pools are available?
+
+The latest list is available on GitHub here: 
+- https://github.com/unicitynetwork/alpha-miner/blob/main/README.md#pool-mining-stratum
+
+## What mining tools are available?
+
+- Block explorer: https://www.unicity.network/
+- Mining software: alpha-miner or SRBMiner.
+
+## What wallets are available?
+
+- Web wallet: https://unicitynetwork.github.io/webwallet/ 
+- AgentSphere: https://sphere.unicity.network/
+
+## What are the tokenomics of this project?
+
+Please see tokenomics here: 
+- https://unicity-tokenomics-bp6c0ne.gamma.site/
+
+## Is it 10BN total Supply or 21M total supply?
+
+The current chain (ALPHA) has BTC tokenomics i.e. 21M max supply. Unicity's native token, UCT, is integral to the network, is used via subscriptions, securing the network, and providing essential liquidity.
+UCT features an uncapped supply, commencing with an initial 10 billion tokens. At Mainnet launch, approximately 7% of tokens will be in circulation, with the remainder released on a proposed schedule to ensure network stability. This strategic apportionment supports our early contributors and is designed to foster a vibrant, active community, ensuring the ongoing health and growth of the Unicity ecosystem. More detailed tokenomics: https://unicity-tokenomics-bp6c0ne.gamma.site/ 
+
+## What is TGE, how will tokens be transferred? Will there be KYC?
+
+TGE means Token Generation Event, or the genesis event of mainnet. The alpha chain UTXOset will be encoded into the genesis block of the new chain. There will not be KYC.
+
+## Will there be mining after TGE? 
+
+Yes. proposed initial Inflation of 5% or initially 500M tokens a year through Proof of Work.
+
+## What is one ALPHA equivalent to at TGE?
+
+476.19 UCT. The new chain will have an initial 10Bn supply. 20% of the chain tokens are allocated to “Network” which is the alpha chain. So 1% of the alpha chain is equal to 1% of the new chain. Or to convert the number of ALPHA into the new chain you need to multiply by 10BN/21M or 476.19.
+
+## What is the vesting schedule for tokens after TGE?
+
+Please see here: https://unicity-tokenomics-bp6c0ne.gamma.site/
+
+## If there are no user transactions at the Proof of Work layer how will it trade?
+
+The above diagram shows the architecture of Unicity. Coins are mined as normal at the Proof of Work Layer. When a User wants to transact they will send a transaction request to the PoW layer and the coin will be burnt and a new token, of equivalent value will be minted  at the agent layer, where it is free to move around the Internet. So think about it this way: you win a block reward, you then send a transaction to the consensus layer and a new token of equivalent value shows up in Hyperliquid for trading or in your mobile device for private spending, whatever you prefer. 
+
+Agents are where the magic happens in Unicity. The PoW layer is there for tokenomics, security and providing a Bitcoin style “trust no one and verify” trust model at the Agent Layer.
+
+## When CEX?
+
+We are at the "finish the protocol and launch products" stage of development. Exchange conversations will come later once we have proven traction.
+
+## What are the official links / socials?
+
+- Website: https://www.unicity.ai/
+- GitHub: https://github.com/unicitynetwork
+- AgentSphere: https://sphere.unicity.network/
+- X: https://x.com/unicity_labs
+- Discord: https://discord.gg/8VxMhVA3
+- YouTube: https://www.youtube.com/@unicity-labs 
+
