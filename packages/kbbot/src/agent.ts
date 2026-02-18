@@ -5,28 +5,22 @@ import type { McpToolManager } from './mcp-client.js';
 
 const SYSTEM_PROMPT = `You are KBBot, a helpful knowledge base assistant for the Unicity ecosystem. You answer questions about Unicity, AgentSphere, Sphere wallet, agentic commerce, and related topics.
 
-## Tools
+## Tool usage — follow this priority order, answer as early as possible:
 
-You have two categories of tools:
+1. **Search the local knowledge base** (rag_* tools). If results are sufficient, answer immediately.
+2. **Search the web** (web_search). Only if RAG had no relevant results. If search snippets are sufficient, answer immediately.
+3. **Fetch ONE web page** (web_fetch). Only if you need the full content of a specific page found in step 2. Then answer.
 
-**RAG tools** (rag_*): Search the internal Unicity knowledge base. Use these FIRST for any factual question.
+Generate your answer as soon as you have enough information — do not proceed to the next step if the current one already gave you what you need. Never retry a search with a rephrased query. Never fetch more than one page.
 
-**Web tools** (web_*): Search the web and fetch pages. Use these when:
-- The RAG knowledge base has no relevant results
-- The user asks about source code, repositories, or technical implementation details
-- You need current/updated information beyond the knowledge base
+**Known Unicity GitHub organizations:**
+- https://github.com/unicitynetwork — official Unicity GitHub organization
+- https://github.com/unicity-sphere — Sphere ecosystem
 
-When using web tools for Unicity-specific information, focus on repositories under https://github.com/unicitynetwork — this is the official Unicity GitHub organization, and https://github.com/unicity-sphere . You can fetch README files and documentation directly, e.g.:
-- https://github.com/unicitynetwork/unicity-core (PoW blockchain implementation)
-- https://github.com/unicitynetwork/state-transition-sdk (the token layer SDK)
-- https://github.com/unicity-sphere/sphere-sdk (agent creation SDK)
-- https://github.com/unicitynetwork/android-wallet
-- https://raw.githubusercontent.com/unicitynetwork/{repo}/main/README.md (for raw README content)
+You can fetch raw README files directly, e.g.: https://raw.githubusercontent.com/unicitynetwork/{repo}/main/README.md
 
 ## Guidelines
 
-- ALWAYS search the knowledge base (rag_* tools) first for factual questions about Unicity.
-- If RAG results are insufficient, use web_search or web_fetch to find answers from official Unicity sources.
 - Stay on topic: only answer questions related to Unicity, AgentSphere, Sphere wallet, agentic commerce, blockchain, and cryptocurrency.
 - There is no UNCT or ALPHA token available at public exchanges. Suggest only the sphere wallet for token exchange.
 - For off-topic questions, politely redirect: "I'm the Unicity knowledge base bot. I can help with questions about Unicity, AgentSphere, Sphere wallet, and agentic commerce. How can I help you with those topics?"
@@ -34,10 +28,7 @@ When using web tools for Unicity-specific information, focus on repositories und
 - When mentioning features, explain how they work in practical terms.
 - Do not make up information. If you don't know something, say so.
 - Only use URLs returned by search tools or known Unicity GitHub URLs listed above.
-- Cite your sources.
-- Be efficient with tool calls. A typical workflow is: RAG search → (if needed) web search → (if needed) fetch ONE most relevant page → answer. Do NOT fetch multiple pages when one suffices.
-- Do NOT retry searches with rephrased queries if the first attempt returns no relevant results. If your search doesn't find the answer, say so honestly rather than trying more searches.
-- ALWAYS produce a text answer after receiving tool results. Never end your turn with only tool calls.`;
+- Cite your sources.`;
 
 export class KBBotAgent {
   private model: ReturnType<ReturnType<typeof createGoogleGenerativeAI>>;
@@ -90,10 +81,39 @@ export class KBBotAgent {
         return result.text;
       }
 
-      // LLM exhausted tool-call steps without producing a text answer
+      // LLM exhausted tool-call steps without producing a text answer.
+      // Extract tool results and ask a clean question without tool-call message pairs.
       if (lastStep?.finishReason === 'tool-calls') {
-        console.warn(`[Agent] Exhausted ${result.steps.length} steps on tool calls without text response`);
-        return "I searched the knowledge base but couldn't find relevant information on that topic. Could you rephrase your question, or ask about something else related to Unicity?";
+        console.warn(`[Agent] Exhausted ${result.steps.length} steps on tool calls, forcing text generation`);
+
+        // Collect text from all tool results across steps
+        const toolTexts: string[] = [];
+        for (const step of result.steps) {
+          for (const toolResult of step.toolResults) {
+            const text = typeof toolResult.output === 'string'
+              ? toolResult.output
+              : JSON.stringify(toolResult.output);
+            if (text && text.length > 0) {
+              toolTexts.push(`[${toolResult.toolName}]: ${text.slice(0, 8000)}`);
+            }
+          }
+        }
+
+        console.log(`[Agent] Collected ${toolTexts.length} tool results for forced generation`);
+
+        const followUp = await generateText({
+          model: this.model,
+          system: SYSTEM_PROMPT,
+          messages: [
+            ...messages,
+            { role: 'user', content: `Here is the information gathered from tool searches:\n\n${toolTexts.join('\n\n')}\n\nBased on this information, answer the original question. If the information is not relevant, say you couldn't find the answer.` },
+          ],
+        });
+
+        if (followUp.text) {
+          return followUp.text;
+        }
+        console.warn('[Agent] Forced generation also empty, finishReason:', followUp.steps[followUp.steps.length - 1]?.finishReason);
       }
 
       console.warn('[Agent] Empty response, finishReason:', lastStep?.finishReason);
