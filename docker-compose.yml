@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: packages/mcp-trivia/Dockerfile
-    ports:
-      - "3001:3001"
+    networks:
+      - internal
     environment:
       PORT: 3001
       WINNING_STREAK: ${WINNING_STREAK:-10}
@@ -28,11 +28,11 @@ services:
     build:
       context: ./packages/mcp-web-py
       dockerfile: Dockerfile
-    ports:
-      - "3002:3002"
+    networks:
+      - internal
     environment:
       PORT: 3002
-      SEARXNG_URL: ${SEARXNG_URL:-http://localhost:8888}
+      SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
       SEARXNG_KEY: ${SEARXNG_KEY:-}
     restart: unless-stopped
 
@@ -40,8 +40,8 @@ services:
     build:
       context: ./packages/mcp-rag
       dockerfile: Dockerfile
-    ports:
-      - "3003:3003"
+    networks:
+      - internal
     environment:
       PORT: 3003
       DATA_DIR: /data/docs
@@ -57,6 +57,8 @@ services:
       dockerfile: packages/agent-server/Dockerfile
     ports:
       - "3000:3000"
+    networks:
+      - internal
     environment:
       PORT: 3000
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
@@ -86,7 +88,9 @@ services:
       context: .
       dockerfile: packages/kbbot/Dockerfile
     ports:
-      - "3004:3004"
+      - "127.0.0.1:3004:3004"
+    networks:
+      - internal
     environment:
       PORT: 3004
       NETWORK: ${KBBOT_NETWORK:-testnet}
@@ -115,8 +119,8 @@ services:
     build:
       context: .
       dockerfile: packages/viktor/Dockerfile
-    ports:
-      - "3005:3005"
+    networks:
+      - internal
     environment:
       PORT: 3005
       NETWORK: ${VIKTOR_NETWORK:-testnet}
@@ -149,6 +153,10 @@ services:
   #   ports:
   #     - "5173:80"
   #   restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
 
 volumes:
   trivia-data:

@@ -25,7 +25,7 @@ EXPOSE 3002
 # Set environment
 ENV PORT=3002
 ENV PYTHONUNBUFFERED=1
-ENV SEARXNG_URL=http://localhost:8888
+ENV SEARXNG_URL=http://searxng:8080
 ENV SEARXNG_KEY=
 
 # Run server
