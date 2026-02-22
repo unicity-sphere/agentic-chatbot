@@ -424,6 +424,6 @@ We are at the "finish the protocol and launch products" stage of development. Ex
 - GitHub: https://github.com/unicitynetwork
 - AgentSphere: https://sphere.unicity.network/
 - X: https://x.com/unicity_labs
-- Discord: https://discord.gg/8VxMhVA3
+- Discord: https://discord.gg/PGzNZT5uVp
 - YouTube: https://www.youtube.com/@unicity-labs
 
