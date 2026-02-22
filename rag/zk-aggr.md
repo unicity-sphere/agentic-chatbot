@@ -1,29 +1,6 @@
----
-abstract: |
-  Unicity is a novel blockchain protocol with the ambitious goal of
-  enabling token transactions to occur off-chain and, when necessary,
-  offline. This premise requires supporting infrastructure to guarantee
-  that there are no parallel states of assets, or more specifically,
-  that there is no double-spending; a property we term the *unicity*. It
-  turns out that the lack of globally shared state and ordering reduces
-  the blockchain overhead considerably. In designing this
-  infrastructure, no compromises were made regarding its trust
-  assumptions. This paper details the design of the Aggregation Layer,
-  the component responsible for producing Proofs of Inclusion and
-  Non-inclusion to the users. We analyze its design for efficiency and
-  evaluate the robustness of its trust and security model, and gains
-  offered by cryptographic zero-knowledge tools.
-author:
-- Risto Laanoja
-bibliography:
-- aggregation-layer.bib
-date: 2026-02-06
-title: |
-  Unicity Infrastructure:\
-  the Aggregation Layer
----
+# Unicity Bluepaper
 
-# Motivation
+## Motivation
 
 The foundational principle of the Unicity Network [@wp] is to minimize
 the volume of on-chain data. This is based on the observation that
@@ -87,7 +64,7 @@ reference="sec:custom-air-circuit"} for details.
 The estimated implementation effort reflects the perceived maturity and
 learning curve; and the difficulty of producing safe implementations.
 
-# System Architecture
+## System Architecture
 
 To prevent double-spending of tokens, the Unicity Infrastructure
 permanently[^2] records a unique identifier for every spent token state.
@@ -137,7 +114,7 @@ consistency.
 <figcaption>Layered architecture of the Unicity Network.</figcaption>
 </figure>
 
-## Consensus Layer
+### Consensus Layer
 
 Decentralization is achieved by a Proof-of-Work (PoW) blockchain
 instance which manages consensus, including the validator selection for
@@ -202,7 +179,7 @@ Consensus Layer validators receive their block rewards at the ends of
 epochs. It is possible to increase economic security by implementing
 slashing based on withheld PoW and Consensus Layer block rewards.
 
-### Consensus Roadmap {#sec:consensus-roadmap}
+#### Consensus Roadmap {#sec:consensus-roadmap}
 
 The introduction of economic security mechanisms is a logical step
 toward evolving the Consensus Layer into a full Proof-of-Stake (PoS)
@@ -219,7 +196,7 @@ validators based on the stake, 4) adjusting incentives (block rewards,
 optional slashing), 5) migrating the token balances, and 5) sunsetting
 the PoW chain.
 
-## Aggregation Layer
+### Aggregation Layer
 
 The Aggregation Layer, also known as the Uniqueness Oracle, implements a global, append-only key-value store
 that immutably records every spent token state. More specifically, it
@@ -252,13 +229,13 @@ Assuming correct validation of the non-deletion proof and chaining of
 the Aggregation Layer's state roots by the Consensus Layer, the
 Aggregation Layer can be considered trustless.
 
-## Execution Layer
+### Execution Layer
 
 The Execution Layer, also known as the Agent Layer, is responsible for
 executing transactions and other business logic, using the services of
 the Aggregation Layer and Unicity in general.
 
-# Security Model of the Aggregation Layer
+## Security Model of the Aggregation Layer
 
 The Aggregation Layer implements a distributed, authenticated,
 append-only dictionary data structure. It authenticates incoming state
@@ -347,7 +324,7 @@ Section [4](#sec:consistency-proof){reference-type="ref"
 reference="sec:consistency-proof"}), the Aggregation Layer can be
 considered trustless.
 
-## "Maximalist" Security Assumptions
+### "Maximalist" Security Assumptions
 
 In this model, we assume that users are capable of validating all
 aspects of system operation that are relevant to their own assets. This
@@ -385,7 +362,7 @@ which show that each round's non-deletion proof is valid and that no
 rounds were skipped from verification. These recursive proofs are
 generated periodically and are made available with some latency.
 
-## Practical Security Assumptions
+### Practical Security Assumptions
 
 If we relax the model by assuming that a majority of BFT consensus nodes
 exhibit economically rational behavior and do not collude maliciously
@@ -406,7 +383,7 @@ per week). When transitioning to proof-of-stake (PoS) consensus (see
 Section [2.1.1](#sec:consensus-roadmap){reference-type="ref"
 reference="sec:consensus-roadmap"}), the Root of Trust remains the same.
 
-# Non-deletion Proof {#sec:consistency-proof}
+## SMT Non-deletion Proof {#sec:consistency-proof}
 
 A non-deletion proof is a cryptographic construction that validates one
 round of operation of the append-only accumulator.
@@ -485,7 +462,7 @@ $h(v, v_s)$ $p' \gets p' \| (k_p, v_p)$ $m \gets m + 1$ $p \gets p'$
 :::
 ::::
 
-# (ZK)-SNARKs
+## (ZK)-SNARKs
 
 By using an appropriate cryptographic SNARK system, the size of the
 non-deletion proof can be reduced to a constant.
@@ -516,7 +493,7 @@ When the Consensus Layer verifies these succinct proofs, the Aggregation
 Layer operates trustlessly. However, certain redundancy is still
 required to ensure data availability of the SMT itself.
 
-# Circuit-Based SNARK Definition
+## Circuit-Based SNARK Definition
 
 Due to the limited expressivity of an arithmetic circuit (e.g., no
 data-dependent loops or real branching), the entire computation flow
@@ -599,13 +576,13 @@ The MUXes for internal layers are connected to a vector containing:
 
 Both halves' MUXes are controlled by the same wiring signal.
 
-## Performance Indication
+### Performance Indication
 
 Initial benchmarks on a consumer laptop (Apple M1) using the Poseidon
 hash function indicate a proving throughput of up to $25$ transactions
 per second.
 
-# Execution Trace-Based STARK
+## Execution Trace-Based STARK
 
 An alternative to a bespoke arithmetic circuit is to use a
 general-purpose zero-knowledge virtual machine (zkVM). In this approach,
@@ -639,7 +616,7 @@ underlying technology is often referred to as "ZK", we are using it as a
 Scalable Transparent ARgument of Knowledge (STARK).
 
 
-# Summary
+## Summary
 
 Zero-knowledge proof systems offer a powerful method for creating
 succinct proofs of performing some computation, in our case, checking

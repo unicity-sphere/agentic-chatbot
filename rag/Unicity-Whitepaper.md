@@ -1,26 +1,4 @@
----
-abstract: |
-  The internet is being rebuilt for machines: autonomous intelligent
-  agents operating and transacting continuously. To enable agents to
-  transact with the throughput, latency, and security required, we
-  present Unicity, a new blockchain architecture that eliminates the
-  shared ledger/validator construct of previous blockchain designs.
-  On-chain state is reduced to the minimum necessary to prove uniqueness
-  of off-chain transactions. Assets are self-authenticating
-  cryptographic objects, that live off-chain and move peer-to-peer
-  without intermediary validation. This eliminates the fundamental
-  bottlenecks of traditional designs: throughput becomes unconstrained,
-  execution parallelizes without limit, and privacy is preserved by
-  default. On this foundation, we construct the Autonomous Agentic
-  Internet, a decentralized platform for the discovery, orchestration
-  and execution of autonomous agents, with safety, explainability and
-  verifiability by design.
-author:
-- |
-  The Unicity Developers\
-  info@unicity-labs.com
-title: An Autonomous Agentic Internet
----
+# Unicity Whitepaper
 
 ## What is Unicity
 
