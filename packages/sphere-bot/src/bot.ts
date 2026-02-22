@@ -9,7 +9,6 @@ export class SphereBot {
   private config: SphereBotConfig;
   private agent: SphereBotAgent;
   private conversations: Map<string, ModelMessage[]> = new Map();
-  private pendingWelcomes: Set<string> = new Set();
   private prefix: string;
 
   constructor(config: SphereBotConfig, agent: SphereBotAgent) {
@@ -54,6 +53,19 @@ export class SphereBot {
       // Ignore our own messages
       if (message.senderPubkey === identity.chainPubkey) return;
 
+      // Welcome trigger → respond with canned message, skip LLM
+      if (this.config.welcomeTrigger && this.config.welcomeMessage
+          && message.content === this.config.welcomeTrigger) {
+        const label = message.senderNametag ? `@${message.senderNametag}` : message.senderPubkey.slice(0, 12) + '...';
+        try {
+          await sphere.communications.sendDM(message.senderPubkey, this.config.welcomeMessage);
+          console.log(`${this.prefix} Sent welcome to ${label}`);
+        } catch (error) {
+          console.error(`${this.prefix} Failed to send welcome to ${label}:`, error);
+        }
+        return;
+      }
+
       console.log(`${this.prefix} DM from ${message.senderNametag || message.senderPubkey.slice(0, 12)}...: ${message.content.slice(0, 100)}`);
 
       try {
@@ -97,40 +109,6 @@ export class SphereBot {
     });
 
     console.log(`${this.prefix} Listening for DMs`);
-  }
-
-  async notifyNewUser(pubkey: string, nametag?: string): Promise<void> {
-    if (!this.config.welcomeMessage) return;
-
-    if (!this.sphere) {
-      console.warn(`${this.prefix} Not ready, ignoring notify`);
-      return;
-    }
-
-    // Deduplicate: skip if we already have a pending welcome for this pubkey
-    if (this.pendingWelcomes.has(pubkey)) {
-      console.log(`${this.prefix} Welcome already pending for ${pubkey.slice(0, 12)}...`);
-      return;
-    }
-
-    this.pendingWelcomes.add(pubkey);
-    const label = nametag ? `@${nametag}` : pubkey.slice(0, 12) + '...';
-    console.log(`${this.prefix} Scheduling welcome DM to ${label} in ${this.config.welcomeDelayMs}ms`);
-
-    const welcomeMessage = this.config.welcomeMessage;
-    setTimeout(async () => {
-      this.pendingWelcomes.delete(pubkey);
-      try {
-        await this.sphere!.communications.sendDM(pubkey, welcomeMessage);
-        console.log(`${this.prefix} Sent welcome DM to ${label}`);
-      } catch (error) {
-        console.error(`${this.prefix} Failed to send welcome DM to ${label}:`, error);
-      }
-    }, this.config.welcomeDelayMs);
-  }
-
-  get identity() {
-    return this.sphere?.identity ?? null;
   }
 
   async destroy(): Promise<void> {

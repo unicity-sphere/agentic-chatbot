@@ -35,5 +35,4 @@ COPY --from=builder /app/packages/viktor/package.json ./packages/viktor/package.
 RUN pnpm install --frozen-lockfile --prod --filter @agentic/viktor...
 
 WORKDIR /app/packages/viktor
-EXPOSE 3005
 CMD ["pnpm", "start"]

@@ -35,5 +35,4 @@ COPY --from=builder /app/packages/kbbot/package.json ./packages/kbbot/package.js
 RUN pnpm install --frozen-lockfile --prod --filter @agentic/kbbot...
 
 WORKDIR /app/packages/kbbot
-EXPOSE 3004
 CMD ["pnpm", "start"]

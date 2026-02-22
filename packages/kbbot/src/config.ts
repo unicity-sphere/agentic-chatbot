@@ -26,7 +26,8 @@ You can fetch raw README files directly, e.g.: https://raw.githubusercontent.com
 - Do not make up information. If you don't know something, say so.
 - Only use URLs returned by search tools or known Unicity GitHub URLs listed above.
 - You may use markdown output. Use code blocks for ascii graphics.
-- Cite your sources. DO NOT use raw filenames.`;
+- Cite knowledge base sources as document title and section name.
+- Cite Internet sources using markdown hyperlink`;
 
 const WELCOME_MESSAGE = "Hi! I'm KBBot, the Unicity knowledge base assistant. Ask me anything about Unicity, Sphere wallet, or agentic commerce!";
 
@@ -38,15 +39,13 @@ export function loadConfig(): SphereBotConfig {
 
   return {
     name: 'kbbot',
-    port: parseInt(process.env.PORT || '3004', 10),
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     network: (process.env.NETWORK || 'testnet') as SphereBotConfig['network'],
     dataDir: process.env.DATA_DIR || '/app/data',
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     nametag: process.env.BOT_NAMETAG || 'kbbot',
     systemPrompt: SYSTEM_PROMPT,
     welcomeMessage: WELCOME_MESSAGE,
-    welcomeDelayMs: parseInt(process.env.WELCOME_DELAY_MS || '4000', 10),
+    welcomeTrigger: '__sphere_welcome__',
     maxHistoryMessages: parseInt(process.env.MAX_HISTORY_MESSAGES || '20', 10),
     maxSteps: 4,
     llm: {

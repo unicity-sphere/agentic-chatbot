@@ -41,15 +41,12 @@ export function loadConfig(): SphereBotConfig {
 
   return {
     name: 'viktor',
-    port: parseInt(process.env.PORT || '3005', 10),
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     network: (process.env.NETWORK || 'testnet') as SphereBotConfig['network'],
     dataDir: process.env.DATA_DIR || '/app/data',
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     nametag: process.env.BOT_NAMETAG || 'viktor',
     systemPrompt: SYSTEM_PROMPT,
     welcomeMessage: undefined, // no welcome DMs
-    welcomeDelayMs: 4000,
     maxHistoryMessages: parseInt(process.env.MAX_HISTORY_MESSAGES || '10', 10),
     maxSteps: 6,
     llm: {
