@@ -190,22 +190,6 @@ Sphere supports group messaging through NIP-29 relay-based groups.
 
 Group creation is available to relay administrators. Click **Create Group**, enter a name and description, and the group is created on the relay.
 
-## AI Agents and Marketplaces
-
-The main content area of Sphere displays a grid of AI-powered agents and marketplace services. Click any agent card to interact with it.
-
-### Available Agents
-
-- **Chat** — Direct messages and group chat (described above).
-- **Viktor (Uncensored AI)** — A privacy-focused AI assistant. Ask it questions, get research help, or have general conversations. No logging is performed.
-- **P2P Predict (Sports)** — A sports prediction marketplace. Browse upcoming matches, place predictions, and view your bet history. Quick filters for Basketball, Soccer, Tennis, and Cricket.
-- **OTC Crypto** — Peer-to-peer cryptocurrency trading. Buy and sell ALPHA tokens directly with other users. Quick actions to buy common amounts.
-- **Buy / Sell Anything** — A general-purpose P2P marketplace. List items for sale or browse listings from others. Categories include Gold, Tickets, ASICs, and more.
-- **Pokemon Cards** — A Pokemon card marketplace. Browse cards, add them to your cart, and purchase with Unicity tokens. You can also list your own cards for sale.
-- **Marketplace** — An embedded view of the Unicity Marketplace website.
-
-Most agents that involve transactions require a wallet to be set up. If you haven't created a wallet yet, the agent will prompt you to do so.
-
 ## IPFS Sync
 
 Sphere can sync your token data to IPFS for backup and cross-device access.
@@ -261,26 +245,6 @@ When an external dApp requests a connection:
 3. Once connected, the dApp can request transactions (sends, payment requests) which open pre-filled in your wallet for your confirmation.
 
 Approved connections are remembered per website so you won't be prompted again for the same dApp.
-
-## Mining ALPHA
-
-Sphere provides information about mining ALPHA tokens. Access it from the **Mine Alpha** link in the header navigation.
-
-### Commercial Mining
-
-Use a cloud mining service like Friendly Miners — no hardware required. The service handles mining operations and provides daily payouts to your ALPHA address.
-
-### Solo Mining
-
-Run the Unicity miner software on your own hardware. Sphere provides installation commands, hardware requirements, and configuration instructions.
-
-### Pool Mining
-
-Join a mining pool to combine hash power with other miners and share rewards. Available pools include:
-- **Unicity Pool** (1% fee) — `pool.unicity.network:3333`
-- **HashVault** (0.9% fee)
-- **HeroMiners** (1% fee)
-- **2Miners** (1% fee)
 
 ## Tips and Best Practices
 
