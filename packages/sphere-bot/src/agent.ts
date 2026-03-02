@@ -104,4 +104,30 @@ export class SphereBotAgent {
       return "I encountered an error while processing your question. Please try again.";
     }
   }
+
+  async respondToTransfer(transferPrompt: string, transferContext: string, history: ModelMessage[]): Promise<string> {
+    try {
+      const messages: ModelMessage[] = [
+        ...history,
+        { role: 'user', content: transferContext },
+      ];
+
+      const result = await generateText({
+        model: this.model,
+        system: transferPrompt,
+        messages,
+        ...(this.config.llm.temperature !== undefined ? { temperature: this.config.llm.temperature } : {}),
+      });
+
+      if (result.text) {
+        return result.text;
+      }
+
+      console.warn(`${this.prefix} Empty transfer response, finishReason:`, result.steps[result.steps.length - 1]?.finishReason);
+      return "Thank you for the transfer!";
+    } catch (error) {
+      console.error(`${this.prefix} Error generating transfer response:`, error);
+      return "Thank you for the transfer!";
+    }
+  }
 }

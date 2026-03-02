@@ -29,4 +29,13 @@ export interface SphereBotConfig {
   };
   /** MCP servers to connect to */
   mcpServers: Array<{ name: string; url: string }>;
+  /** Optional system prompt for responding to token transfers. If undefined, token transfers are ignored. */
+  tokenTransferPrompt?: string;
+  /** Optional oracle/aggregator overrides */
+  oracle?: {
+    /** Path to trust base JSON file (e.g. './trustbase-testnet.json') */
+    trustBasePath?: string;
+    /** Enable debug logging for oracle/aggregator operations */
+    debug?: boolean;
+  };
 }

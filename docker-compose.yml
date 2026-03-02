@@ -100,6 +100,8 @@ services:
       DATA_DIR: /app/data
       TOKENS_DIR: /app/tokens
       MAX_HISTORY_MESSAGES: ${KBBOT_MAX_HISTORY_MESSAGES:-20}
+      TRUSTBASE_PATH: /app/trustbase-testnet.json
+      ORACLE_DEBUG: ${ORACLE_DEBUG:-true}
     volumes:
       - kbbot-data:/app/data
       - kbbot-tokens:/app/tokens
