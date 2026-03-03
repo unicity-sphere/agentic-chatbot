@@ -173,6 +173,9 @@ decentralized validators, but the fundamental model remains unchanged: a
 set of intermediaries who see every transaction, process every transfer,
 and maintain a ledger on behalf of participants.
 
+[^1]: And only a tiny minority or participants are downloading multi-TB
+    chain state for independent verification.
+
 The validator set operating on a shared ledger is also the fundamental
 bottleneck through which all economic activity must flow. Throughput is
 limited by what validators can process. Latency is determined by how
@@ -194,10 +197,7 @@ centralized sequencers who see, order and periodically settle to the L1.
 Sidechains create separate ledgers with their own validator sets.
 Sharding partitions state but maintains validators within each shard.
 
-<figure id="fig:layers" data-latex-placement="htbp">
-<img src="pic/mempool.png" style="width:100.0%" />
-<figcaption>Transaction Flows</figcaption>
-</figure>
+![Transaction Flows](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/mempool.png)
 
 Unicity is an attempt to eliminate these constraints by enabling true
 peer-to-peer value transfer without intermediary validation. Like
@@ -238,10 +238,7 @@ on-chain overhead while maintaining the security guarantees of a
 permissionless blockchain. The system separates concerns across three
 distinct layers, each optimized for its specific function.
 
-<figure id="fig:arch" data-latex-placement="htbp">
-<img src="pic/FullStack3.png" style="width:100.0%" />
-<figcaption>Unicity’s layered infrastructure</figcaption>
-</figure>
+![Unicity’s layered infrastructure](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/FullStack3.png)
 
 The Consensus Layer provides the system's root of trust through a
 minimal "headers only" Proof of Work blockchain.
@@ -298,10 +295,7 @@ Table: Unicity's layers, their roles and decentralization overhead
 
 ### Consensus Layer Implementation
 
-<figure id="fig:PoW" data-latex-placement="htbp">
-<img src="pic/Miners.png" style="width:70.0%" />
-<figcaption>Consensus Layer with Proof of Work trust anchor</figcaption>
-</figure>
+![Consensus Layer with Proof of Work trust anchor](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/Miners.png)
 
 Proof of Work remains unsurpassed as means to launch a fault tolerant
 decentralized censorship resistant network. It ties the security of the
@@ -326,10 +320,7 @@ concentration of mining power.
 
 ### Uniqueness Oracle Implementation
 
-<figure id="fig:SMT" data-latex-placement="htbp">
-<img src="pic/SMT-Infra2.png" style="width:100.0%" />
-<figcaption>Uniqueness Oracle</figcaption>
-</figure>
+![Uniqueness Oracle](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/SMT-Infra2.png)
 
 A Sparse Merkle Tree (SMT) is used such that each unique state
 transition request from the agent layer is allocated a leaf node in the
@@ -342,6 +333,8 @@ authenticate the request and verify the ZK SMT consistency proof, and
 then commit to the new SMT root and return a certificate, or
 cryptographic proof of acceptance of the valid change. After that only
 requests from the SMT which update the new state root can be accepted.
+
+[^2]: This proves that no previously recorded state transitions were modified or removed during the round.
 
 In a hierarchical trustless system, the principle is that the base layer
 provides decentralization, while the layers below it present
@@ -367,7 +360,7 @@ unlimited number of such trustless shards.
 Table [\[tab:zk-comparison\]](#tab:zk-comparison){reference-type="ref"
 reference="tab:zk-comparison"} compares different ZKP technologies. We
 have picked subjectively the most appropriate ZK schemes and supporting
-front-ends ("stacks"). See the bluepaper[^3] for full technical details.
+front-ends ("stacks"). See the bluepaper [https://github.com/unicitynetwork/aggr-layer-paper/releases] for full technical details.
 
 ::: table*
 
@@ -396,10 +389,7 @@ parallelizable i.e., the tree can be dynamically sub-divided into
 sub-trees which operate asynchronously in parallel with redundancy
 provided by multiple Aggregators processing the same sub-tree.
 
-<figure id="fig:SMT-Infra" data-latex-placement="htbp">
-<img src="pic/SMT-ProverMarketPlace.png" style="width:70.0%" />
-<figcaption>Hierarchical infrastructure</figcaption>
-</figure>
+![Hierarchical infrastructure](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/SMT-ProverMarketPlace.png)
 
 The Uniqueness Oracle delivers three kinds of proofs to its clients:
 inclusion proofs, exclusion proofs, and Unicity proofs.
@@ -442,7 +432,7 @@ the SMT from which the inclusion/exclusion proof was extracted.
 
 ## Token Operations
 
-The State Transition SDK[^4] allows the integration of token operations
+The State Transition SDK [https://github.com/unicitynetwork/state-transition-sdk] allows the integration of token operations
 (mint, burn, transfer) into off-chain applications.
 
 ### Mint: Chain Agnostic "Detached" Assets
@@ -450,10 +440,7 @@ The State Transition SDK[^4] allows the integration of token operations
 There are three different types of assets that can be minted using the
 Unicity State Transition SDK:
 
-<figure id="fig:TokenGenesis" data-latex-placement="htbp">
-<img src="pic/Genesis.png" style="width:50.0%" />
-<figcaption>Chain agnostic token genesis</figcaption>
-</figure>
+![Chain agnostic token genesis](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/Genesis.png)
 
 a) The Unicity native currency mined through Proof of Work and migrated
 off-chain for transacting. This is done by the miner who originally won
@@ -492,6 +479,8 @@ reference="fig:LowLatency1"}:
 - The Buyer creates a transaction that authorizes[^5] transfer to the
   recipient.
 
+[^5]: By satisfying the unlocking condition, such as providing a digital signature.
+
 - The Buyer sends the state transition request to the Unicity
   infrastructure which will return a unicity proof. The proof certifies
   that the state transition is unique i.e., it has not happened before.
@@ -502,11 +491,7 @@ reference="fig:LowLatency1"}:
 - The Seller verifies the token (the history of transactions and unicity
   proofs) and releases the goods.
 
-<figure id="fig:LowLatency1" data-latex-placement="ht">
-<img src="pic/Transaction1.png" style="width:55.0%" />
-<figcaption>Regular transaction flow with Unicity Proof generated before
-the transfer</figcaption>
-</figure>
+![Regular transaction flow with Unicity Proof generated before the transfer](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/Transaction1.png)
 
 To reduce latency, an extension of the protocol for high frequency
 trading is as shown in Figure [8](#fig:LowLatency2){reference-type="ref"
@@ -532,11 +517,7 @@ Provided that participants have sufficient inventory of tokens for the
 two-second latency, extreme volumes of high frequency transactions can
 be achieved.
 
-<figure id="fig:LowLatency2" data-latex-placement="ht">
-<img src="pic/Transaction2.png" style="width:60.0%" />
-<figcaption>Low-latency transaction flow with proof of inclusion after
-the transfer</figcaption>
-</figure>
+![Low-latency transaction flow with proof of inclusion after the transfer](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/Transaction2.png)
 
 ## Agents as Smart Contracts
 
@@ -548,6 +529,8 @@ and all state is visible to all participants.
 Agents provide equivalent functionality in Unicity without global shared
 state. The underlying mechanism used is *predicates*[^6], generalized
 ownership conditions that define when a token can be transferred.
+
+[^6]: For a detailed description of predicates along with privacy and security proofs, see <https://github.com/unicitynetwork/unicity-predicates-tex/releases>.
 
 - **Simple ownership:** In its simplest form, a token owned by a single
   public key requires a valid signature to transfer.
@@ -782,11 +765,8 @@ Together, these components form the Autonomous Agentic Internet: a
 decentralized platform where agents can be developed, deployed,
 discovered, and orchestrated without centralized gatekeepers.
 
-<figure id="fig:Orchestrator" data-latex-placement="ht">
-<img src="pic/Orchestrator.png" style="width:80.0%" />
-<figcaption>Autonomous Agentic Internet with User
-Orchestrator</figcaption>
-</figure>
+![Autonomous Agentic Internet with User Orchestrator](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/Orchestrator.png)
+
 
 ### Decoupling Logic from Infrastructure
 
@@ -976,10 +956,7 @@ reliable, reproducible, and verifiable execution plans -- extending the
 trust guarantees of Unicity's cryptographic layer up through the agentic
 reasoning stack.
 
-<figure id="fig:Orchestrator2" data-latex-placement="ht">
-<img src="pic/ConflictResolution.png" style="width:80.0%" />
-<figcaption>Neuro-Symbolic Orchestrator</figcaption>
-</figure>
+![Neuro-Symbolic Orchestrator](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/ConflictResolution.png)
 
 A central challenge in a decentralized agent environment is that tools
 are independently authored and exposed by different service providers,
@@ -1079,15 +1056,15 @@ and data, is projected to exceed \$3 trillion by 2030[^7]. Yet the
 infrastructure for agents to discover each other, negotiate terms, and
 settle transactions remains nascent.
 
+[^7]: <https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-agentic-commerce-opportunity-how-ai-agents-are-ushering-in-a-new-era-for-consumers-and-merchants>
+
 Unicity enables decentralized agentic commerce where these functions are
 provided by independent agents rather than a monolithic platform.
 
-<figure data-latex-placement="h">
-<img src="pic/BulletinBoard.png" style="width:80.0%" />
-<figcaption>Decentralized Agentic Commerce: agents interact via the
+![Decentralized Agentic Commerce: agents interact via the
 Cryptographic Bulletin Board (center), utilizing platform functions
-(left) and specialized service agents (right)</figcaption>
-</figure>
+(left) and specialized service agents (right)](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/BulletinBoard.png)
+
 
 #### Intent-Based Discovery
 
@@ -1103,7 +1080,7 @@ Examples of intents:
   location Y, within 7 days, maximum price Z"
 
 - **Services:** "Require 1000 GPU-hours of compute, minimum spec A,
-  availability 99.9%, price range B--C", " I'm hungry, get me a pizza
+  availability 99.9%, price range B--C", "I'm hungry, get me a pizza
   delivered", "I want to exchange my cash for crypto", "I'd like to
   watch the Manchester United game that starts in 10 minutes"
 
@@ -1306,10 +1283,7 @@ approach other players, the players' agents will synchronize with each
 other with verifiable state transitions proving that the game logic has
 been followed and enabling game synchronization and exchange of assets.
 
-<figure id="fig:game" data-latex-placement="H">
-<img src="pic/AgenticGaming.png" style="width:80.0%" />
-<figcaption>Gaming Agents</figcaption>
-</figure>
+![Gaming Agents](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/AgenticGaming.png)
 
 In the event of a failed verification, action can be taken defined by
 the game logic, such as rewinding the game to the previous known good
@@ -1317,18 +1291,3 @@ state. In this way, a completely new type of game engine can be built
 with the game components consisting of autonomous agents managing game
 logic, and semi-autonomous agents operating on behalf of the player and
 interacting with the environment and other players.
-
-[^1]: And only a tiny minority or participants are downloading multi-TB
-    chain state for independent verification.
-
-[^2]: This proves that no previously recorded state transitions were modified or removed during the round.
-
-[^3]: <https://github.com/unicitynetwork/aggr-layer-paper/releases>
-
-[^4]: <https://github.com/unicitynetwork/state-transition-sdk>
-
-[^5]: By satisfying the unlocking condition, such as providing a digital signature.
-
-[^6]: For a detailed description of predicates along with privacy and security proofs, see <https://github.com/unicitynetwork/unicity-predicates-tex/releases>.
-
-[^7]: <https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-agentic-commerce-opportunity-how-ai-agents-are-ushering-in-a-new-era-for-consumers-and-merchants>

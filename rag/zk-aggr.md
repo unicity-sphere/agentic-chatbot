@@ -8,6 +8,10 @@ shared ("on-chain") state is unavoidable only to prevent
 double-spending.[^1] The core tenets of Unicity also include minimizing
 trust requirements, enhancing user privacy, and providing linear scale.
 
+[^1]: Assuming no centrally controlled, non-transparent technologies
+    such as trusted hardware wallets or Trusted Execution Environments
+    (TEEs); and that anyone can be a recipient
+
 In a hierarchical trustless system, the principle is that the base layer
 (e.g., L1 blockchain) provides decentralization, while the layers below
 it (e.g., rollups) present cryptographic proofs of the correctness of
@@ -74,6 +78,9 @@ identical to the one already recorded, making it impossible to obtain a
 new Proof of Unicity. A transaction is considered invalid unless it is
 accompanied by a valid Proof of Unicity.
 
+[^2]: Permanent from the perspective of a token, meaning for a duration
+    exceeding the token's lifetime.
+
 The rest of the processing---executing transactions, running smart
 contracts, etc.---can happen at the client layer, executed by users or
 "agents". Agents are themselves the interested parties in data
@@ -109,10 +116,7 @@ Aggregation Layer connects to the Consensus Layer. For fully trustless
 operation, each request is accompanied by a cryptographic proof of SMT
 consistency.
 
-<figure id="fig:layers" data-latex-placement="!htbp">
-
-<figcaption>Layered architecture of the Unicity Network.</figcaption>
-</figure>
+![Layered architecture of the Unicity Network](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/layers.png)
 
 ### Consensus Layer
 
@@ -208,10 +212,7 @@ of keys not present in the store.
 The Aggregation Layer periodically has its state authenticator certified
 by the Consensus Layer.
 
-<figure id="fig:sharding" data-latex-placement="!t">
-<img src="pic/layers.png" />
-<figcaption>Sharded architecture of the Aggregation Layer.</figcaption>
-</figure>
+![Sharded architecture of the Aggregation Layer.](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/SMT-Infra.png)
 
 The Aggregation layer is sharded based on keyspace slices and can be
 made hierarchical, as shown in
@@ -271,10 +272,7 @@ modeled as
 Algorithm [\[alg:consensuslayer\]](#alg:consensuslayer){reference-type="ref"
 reference="alg:consensuslayer"}.
 
-<figure id="fig:model" data-latex-placement="!htbp">
-
-<figcaption>Security model of the Aggregation Layer.</figcaption>
-</figure>
+![Security model of the Aggregation Layer.](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/aggrsec.png)
 
 For efficiency reasons client requests are processed in batches; the
 tree is re-calculated and the tree root is certified when a batch is
@@ -376,6 +374,9 @@ In this scenario, a transaction is finalized, and an inclusion proof is
 returned within a few seconds, allowing the transaction to be
 independently verified---without consulting external data[^3]---within
 the same timeframe.
+
+[^3]: Previously obtained Root of Trust is used to validate future
+    transactions
 
 The Root of Trust is the set of epoch change records of the BFT
 consensus layer. These records grow slowly (few aggregated signatures
@@ -533,20 +534,14 @@ proof. The pre-processing step encodes the positions of batch and proof
 elements into these control signals, which are then supplied as part of
 the witness.
 
-<figure id="fi:smt-circuit" data-latex-placement="!t">
-<img src="pic/smt-circuit.drawio.png" style="width:90.0%" />
-<figcaption>Circuit structure.</figcaption>
-</figure>
+![Circuit structure](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/smt-circuit.drawio.png)
 
 Each hashing cell in the circuit, as depicted in
 Figure [5](#fi:smt-circuit-cell){reference-type="ref"
 reference="fi:smt-circuit-cell"}, is a template consisting of two input
 multiplexers and one 2-to-1 compressing hash function.
 
-<figure id="fi:smt-circuit-cell" data-latex-placement="t">
-<img src="pic/smt-circuit-cell.drawio.png" />
-<figcaption>One hashing cell of the circuit.</figcaption>
-</figure>
+![One hashing cell of the circuit](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/smt-circuit-cell.drawio.png)
 
 The MUX inputs for the leaf layer of the first half are connected to a
 vector containing:
@@ -591,7 +586,7 @@ the verification logic is written as a traditional imperative program
 for that program.
 
 We have implemented the non-deletion proof verification algorithm as a
-Rust program [@stark] to be proved by the SP1 zkVM [@sp1]. As a
+Rust program [@stark] to be proved by the SP1 zkVM [https://docs.succinct.xyz/docs/sp1/introduction]. As a
 commitment to the "right" program we use a prover key, generated during
 program setup. Its contents are: a commitment to the preprocessed
 traces, the starting Program Counter register, the starting global
@@ -636,27 +631,11 @@ avoid undesirable properties such as trusted setup. Others, like
 Groth16, produce small proofs but require more proving effort and a
 circuit-specific trusted setup. For more complex applications, hybrid
 approaches and proof recursion can be employed.
-Figure [6](#fig:comp){reference-type="ref" reference="fig:comp"}
+Figure [6](#fig:comp)
 illustrates the proof size trade-off.
 
-<figure id="fig:comp" data-latex-placement="!htbp">
+![Proof size vs. use of ZK compression. Dotted line is bandwidth limit, dashed line is compute limit (ZK scheme specific).](https://raw.githubusercontent.com/unicity-sphere/agentic-chatbot/refs/heads/main/rag/pic/comp.png)
 
-<figcaption>Proof size vs. use of ZK compression. Dotted line is
-bandwidth limit, dashed line is compute limit (ZK scheme specific). Not
-to scale.</figcaption>
-</figure>
-
-[^1]: Assuming no centrally controlled, non-transparent technologies
-    such as trusted hardware wallets or Trusted Execution Environments
-    (TEEs); and that anyone can be a recipient
-
-[^2]: Permanent from the perspective of a token, meaning for a duration
-    exceeding the token's lifetime.
-
-[^3]: Previously obtained Root of Trust is used to validate future
-    transactions
-
-[^4]: <https://docs.succinct.xyz/docs/sp1/introduction>
 
 [^5]: <https://github.com/Okm165/sp1-poseidon2/pull/8>
 
