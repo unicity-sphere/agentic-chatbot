@@ -249,6 +249,7 @@ def chunk_markdown(
     """
     # Remove YAML frontmatter
     text = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.DOTALL)
+    source = re.sub(r"\.md$", "", source)
 
     root = _parse_sections(text)
     chunks: list[Chunk] = []

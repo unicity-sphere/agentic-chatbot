@@ -150,19 +150,14 @@ async def list_tools() -> list[Tool]:
                     },
                     "n_results": {
                         "type": "integer",
-                        "description": "Number of results to return (1-10)",
+                        "description": "Number of results to return (1-6)",
                         "minimum": 1,
-                        "maximum": 10,
+                        "maximum": 6,
                         "default": 4,
                     },
                 },
                 "required": ["query"],
             },
-        ),
-        Tool(
-            name="list_documents",
-            description="List all documents currently in the Unicity knowledge base.",
-            inputSchema={"type": "object", "properties": {}},
         ),
     ]
 
@@ -176,8 +171,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
     try:
         if name == "unicity_search":
             return _tool_search(arguments)
-        elif name == "list_documents":
-            return _tool_list()
         else:
             raise ValueError(f"Unknown tool: {name}")
 
@@ -193,7 +186,7 @@ def _text(obj: dict) -> list[TextContent]:
 
 def _tool_search(args: dict) -> list[TextContent | ImageContent]:
     query = args["query"]
-    n = min(args.get("n_results", 5), collection.count() or 1)
+    n = min(args.get("n_results", 4), collection.count() or 1)
 
     results = collection.query(query_texts=[query], n_results=n)
 
@@ -217,34 +210,23 @@ def _tool_search(args: dict) -> list[TextContent | ImageContent]:
             }
         )
 
-        # Collect image refs from metadata
-        images_str = meta.get("images", "")
-        if images_str:
-            for img_name in images_str.split(","):
-                img_name = img_name.strip()
-                if img_name and img_name not in seen_images:
-                    seen_images.add(img_name)
-                    loaded = _load_image(img_name)
-                    if loaded:
-                        b64_data, mime = loaded
-                        image_items.append(
-                            ImageContent(type="image", data=b64_data, mimeType=mime)
-                        )
+        # the nostr messaging can not deliver images
+        # images_str = meta.get("images", "")
+        # if images_str:
+        #     for img_name in images_str.split(","):
+        #         img_name = img_name.strip()
+        #         if img_name and img_name not in seen_images:
+        #             seen_images.add(img_name)
+        #             loaded = _load_image(img_name)
+        #             if loaded:
+        #                 b64_data, mime = loaded
+        #                 image_items.append(
+        #                     ImageContent(type="image", data=b64_data, mimeType=mime)
+        #                 )
 
     content: list[TextContent | ImageContent] = _text({"results": formatted})
     content.extend(image_items)
     return content
-
-
-def _tool_list() -> list[TextContent]:
-    all_meta = collection.get()
-    sources: dict[str, int] = {}
-    for meta in all_meta["metadatas"]:
-        src = meta.get("source", "unknown")
-        sources[src] = sources.get(src, 0) + 1
-
-    docs = [{"source": s, "chunks": c} for s, c in sorted(sources.items())]
-    return _text({"documents": docs, "total_chunks": collection.count()})
 
 
 # ---------------------------------------------------------------------------

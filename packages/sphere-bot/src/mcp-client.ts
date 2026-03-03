@@ -14,9 +14,11 @@ interface McpServer {
 export class McpToolManager {
   private servers: McpServer[] = [];
   private clientPrefix: string;
+  private maxResultChars: number;
 
-  constructor(clientPrefix: string) {
+  constructor(clientPrefix: string, maxResultChars: number = 16000) {
     this.clientPrefix = clientPrefix;
+    this.maxResultChars = maxResultChars;
   }
 
   /** Register an MCP server. Connection is lazy — happens on first getTools(). */
@@ -69,7 +71,13 @@ export class McpToolManager {
               }
 
               const content = callResult.content as any[];
-              const resultText = content.map((item: any) => item.text || JSON.stringify(item)).join('\n');
+              let resultText = content.map((item: any) => item.text || JSON.stringify(item)).join('\n');
+
+              // Truncate oversized tool results
+              if (resultText.length > this.maxResultChars) {
+                console.warn(`[MCP:${server.name}] ${mcpTool.name} result truncated: ${resultText.length} → ${this.maxResultChars} chars`);
+                resultText = resultText.slice(0, this.maxResultChars) + '\n...[truncated]';
+              }
 
               // Log result summary
               try {

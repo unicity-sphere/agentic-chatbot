@@ -27,6 +27,10 @@ export interface SphereBotConfig {
     baseUrl?: string;
     temperature?: number;
   };
+  /** Max characters per individual MCP tool result (default: 16000) */
+  maxToolResultChars?: number;
+  /** Max total context characters (system + history) sent to LLM (default: 100000) */
+  maxContextChars?: number;
   /** MCP servers to connect to */
   mcpServers: Array<{ name: string; url: string }>;
   /** Optional system prompt for responding to token transfers. If undefined, token transfers are ignored. */

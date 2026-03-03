@@ -1,7 +1,13 @@
+import WebSocket from 'ws';
 import { McpToolManager } from './mcp-client.js';
 import { SphereBotAgent } from './agent.js';
 import { SphereBot } from './bot.js';
 import type { SphereBotConfig } from './types.js';
+
+// Polyfill WebSocket for Node.js — sphere-sdk uses the browser global in some code paths
+if (typeof globalThis.WebSocket === 'undefined') {
+  (globalThis as any).WebSocket = WebSocket;
+}
 
 export async function startSphereBot(config: SphereBotConfig): Promise<void> {
   console.log(`[${config.name}] Starting with config:`, {
@@ -13,7 +19,7 @@ export async function startSphereBot(config: SphereBotConfig): Promise<void> {
   });
 
   // MCP tool manager — connections are lazy (established on first DM)
-  const toolManager = new McpToolManager(config.name);
+  const toolManager = new McpToolManager(config.name, config.maxToolResultChars);
   for (const server of config.mcpServers) {
     toolManager.addServer(server.name, server.url);
   }
