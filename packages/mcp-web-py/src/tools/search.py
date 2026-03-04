@@ -53,14 +53,13 @@ async def _search_searxng(query: str, max_results: int, region: str) -> list[dic
 async def _search_ddgs(query: str, max_results: int, region: str) -> list[dict]:
     """Search using DDGS (DuckDuckGo) — runs sync call in thread."""
     def _run():
-        with DDGS() as ddgs:
-            return list(ddgs.text(
-                query=query,
-                region=region,
-                safesearch="off",
-                max_results=max_results,
-                backend="auto",
-            ))
+        return list(DDGS().text(
+            query=query,
+            region=region,
+            safesearch="off",
+            max_results=max_results,
+            backend="auto",
+        ))
 
     raw = await asyncio.to_thread(_run)
     results = []

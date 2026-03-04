@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "db:migrate": "pnpm --filter agent-server db:migrate"
+    "build": "pnpm -r build"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

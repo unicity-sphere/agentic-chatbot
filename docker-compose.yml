@@ -1,27 +1,24 @@
 services:
-  mcp-trivia:
-    build:
-      context: .
-      dockerfile: packages/mcp-trivia/Dockerfile
+  searxng:
+    image: searxng/searxng:latest
     networks:
       - internal
-    environment:
-      PORT: 3001
-      WINNING_STREAK: ${WINNING_STREAK:-10}
-      # Payment configuration (optional - server runs in free mode without these)
-      AGGREGATOR_URL: ${AGGREGATOR_URL:-}
-      AGGREGATOR_API_KEY: ${AGGREGATOR_API_KEY:-}
-      NOSTR_RELAY_URL: ${NOSTR_RELAY_URL:-}
-      TRIVIA_PRIVATE_KEY: ${TRIVIA_PRIVATE_KEY:-}
-      TRIVIA_NAMETAG: ${TRIVIA_NAMETAG:-}
-      PAYMENT_COIN_ID: ${PAYMENT_COIN_ID:-}
-      PAYMENT_AMOUNT: ${PAYMENT_AMOUNT:-1000000000}
-      DAY_PASS_HOURS: ${DAY_PASS_HOURS:-24}
-      PAYMENT_TIMEOUT_SECONDS: ${PAYMENT_TIMEOUT_SECONDS:-120}
-      DATA_DIR: /app/data
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
-      - trivia-data:/app/data
+      - searxng-config:/etc/searxng
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ ! -f /etc/searxng/settings.yml ]; then
+          cat > /etc/searxng/settings.yml <<SETTINGS
+        use_default_settings: true
+        server:
+          secret_key: "$$(head -c 24 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9')"
+        search:
+          formats:
+            - json
+        SETTINGS
+        fi
+        exec /usr/local/searxng/.venv/bin/granian searx.webapp:app
     restart: unless-stopped
 
   mcp-web:
@@ -49,38 +46,6 @@ services:
     volumes:
       - ./rag:/data/docs:ro
       - rag-chromadb:/data/chromadb
-    restart: unless-stopped
-
-  agent-server:
-    build:
-      context: .
-      dockerfile: packages/agent-server/Dockerfile
-    ports:
-      - "3000:3000"
-    networks:
-      - internal
-    environment:
-      PORT: 3000
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-      AMA_API_KEY: ${AMA_API_KEY}
-      AMA_API_URL: ${AMA_API_URL}
-      API_BASE_URL: ${API_BASE_URL}
-      MCP_TRIVIA_URL: http://mcp-trivia:3001/mcp
-      MCP_WEB_URL: http://mcp-web:3002/mcp
-      MCP_RAG_URL: http://mcp-rag:3003/mcp
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
-      DEBUG_PROMPTS: ${DEBUG_PROMPTS:-false}
-      DEBUG_MCP: ${DEBUG_MCP:-false}
-      ENABLE_TOOL_RETRY: ${ENABLE_TOOL_RETRY:-true}
-      MAX_TOOL_RETRIES: ${MAX_TOOL_RETRIES:-2}
-      NODE_ENV: ${NODE_ENV:-development}
-    depends_on:
-      mcp-trivia:
-        condition: service_started
-      mcp-web:
-        condition: service_started
-      mcp-rag:
-        condition: service_started
     restart: unless-stopped
 
   kbbot:
@@ -138,23 +103,12 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # ui:
-  #   build:
-  #     context: .
-  #     dockerfile: packages/ui/Dockerfile
-  #     args:
-  #       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-  #       VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
-  #   ports:
-  #     - "5173:80"
-  #   restart: unless-stopped
-
 networks:
   internal:
     driver: bridge
 
 volumes:
-  trivia-data:
+  searxng-config:
   rag-chromadb:
   kbbot-data:
   kbbot-tokens:
