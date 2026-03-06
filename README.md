@@ -143,7 +143,7 @@ The main execution flow in `agent-server/src/agent/loop.ts`:
 ### KBBot
 
 A standalone knowledge base bot that participates in Sphere's DM chat:
-- Creates a Sphere wallet on first boot (persisted via Docker volumes)
+- Creates a Sphere wallet on first boot (persisted in `data/kbbot/`)
 - Listens for incoming Nostr DMs via Sphere SDK
 - Answers questions using Gemini LLM + RAG and web search tools
 - Sends welcome DMs to new wallet users (via `/api/notify` webhook)
@@ -367,41 +367,30 @@ main().catch(console.error);
 
 See existing services in `docker-compose.yml` for Dockerfile patterns.
 
-## KBBot Operations
+## Bot Data & Backup
 
-### Exporting wallet keys to a new machine
+Bot wallets and tokens are stored in local folders (bind-mounted into containers):
 
-KBBot's wallet identity is stored in Docker volumes. To migrate:
-
-```bash
-# Export (on source machine)
-docker run --rm -v agentic-chatbot_kbbot-data:/data -v $(pwd):/backup alpine \
-  tar czf /backup/kbbot-data.tar.gz -C /data .
-docker run --rm -v agentic-chatbot_kbbot-tokens:/data -v $(pwd):/backup alpine \
-  tar czf /backup/kbbot-tokens.tar.gz -C /data .
-
-# Import (on target machine)
-docker volume create agentic-chatbot_kbbot-data
-docker volume create agentic-chatbot_kbbot-tokens
-docker run --rm -v agentic-chatbot_kbbot-data:/data -v $(pwd):/backup alpine \
-  tar xzf /backup/kbbot-data.tar.gz -C /data
-docker run --rm -v agentic-chatbot_kbbot-tokens:/data -v $(pwd):/backup alpine \
-  tar xzf /backup/kbbot-tokens.tar.gz -C /data
+```
+data/
+├── kbbot/
+│   ├── data/       # wallet.json
+│   └── tokens/     # token state
+└── viktor/
+    ├── data/       # wallet.json
+    └── tokens/     # token state
 ```
 
-### Health check
+The `data/` directory is gitignored. Use the backup/restore script to migrate between machines:
 
 ```bash
-curl http://localhost:3004/health
-# {"status":"ok","nametag":"kbbot","directAddress":"DIRECT://..."}
-```
+# Backup
+./scripts/bot-backup.sh backup kbbot    # creates kbbot-backup.tar.gz
+./scripts/bot-backup.sh backup viktor   # creates viktor-backup.tar.gz
 
-### Notify endpoint (called by Sphere frontend on wallet creation)
-
-```bash
-curl -X POST http://localhost:3004/api/notify \
-  -H 'Content-Type: application/json' \
-  -d '{"pubkey":"02...", "nametag":"alice"}'
+# Restore
+./scripts/bot-backup.sh restore kbbot   # extracts into data/kbbot/
+./scripts/bot-backup.sh restore viktor  # extracts into data/viktor/
 ```
 
 ## Troubleshooting

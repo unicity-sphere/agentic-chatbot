@@ -51,6 +51,9 @@ coverage/
 *.sqlite
 *.sqlite3
 
+# Bot data (wallets, tokens)
+data/
+
 # Docker volumes
 postgres_data/
 

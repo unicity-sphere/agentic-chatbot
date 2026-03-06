@@ -4,7 +4,7 @@ services:
     networks:
       - internal
     volumes:
-      - searxng-config:/etc/searxng
+      - ./data/searxng:/etc/searxng
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -45,7 +45,7 @@ services:
       DB_DIR: /data/chromadb
     volumes:
       - ./rag:/data/docs:ro
-      - rag-chromadb:/data/chromadb
+      - ./data/mcp-rag/chromadb:/data/chromadb
     restart: unless-stopped
 
   kbbot:
@@ -68,8 +68,8 @@ services:
       TRUSTBASE_PATH: /app/trustbase-testnet.json
       ORACLE_DEBUG: ${ORACLE_DEBUG:-true}
     volumes:
-      - kbbot-data:/app/data
-      - kbbot-tokens:/app/tokens
+      - ./data/kbbot/data:/app/data
+      - ./data/kbbot/tokens:/app/tokens
     depends_on:
       mcp-rag:
         condition: service_started
@@ -94,8 +94,8 @@ services:
       DATA_DIR: /app/data
       TOKENS_DIR: /app/tokens
     volumes:
-      - viktor-data:/app/data
-      - viktor-tokens:/app/tokens
+      - ./data/viktor/data:/app/data
+      - ./data/viktor/tokens:/app/tokens
     depends_on:
       mcp-rag:
         condition: service_started
@@ -107,10 +107,3 @@ networks:
   internal:
     driver: bridge
 
-volumes:
-  searxng-config:
-  rag-chromadb:
-  kbbot-data:
-  kbbot-tokens:
-  viktor-data:
-  viktor-tokens:

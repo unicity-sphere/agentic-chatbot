@@ -9,15 +9,13 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
+# Copy dependency files and source
 COPY pyproject.toml ./
+COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -e .
-
-# Copy source code
-COPY src/ ./src/
 
 # Expose port
 EXPOSE 3002
@@ -29,4 +27,4 @@ ENV SEARXNG_URL=http://searxng:8080
 ENV SEARXNG_KEY=
 
 # Run server
-CMD ["python", "-m", "src.server"]
+CMD ["python", "-m", "src"]
