@@ -14,7 +14,7 @@ class SearchInput(BaseModel):
     """Input schema for web search"""
     query: str = Field(..., min_length=1, description="Search query")
     max_results: int = Field(10, ge=1, le=20, description="Maximum number of results (1-20)")
-    region: str = Field("wt-wt", description="Region code (us-en, uk-en, wt-wt for worldwide)")
+    region: str = Field("us-en", description="Region code matching the user's language/location (e.g. us-en, uk-en, de-de, fr-fr, es-es, wt-wt for worldwide)")
     source: Literal["auto", "searxng", "ddgs"] = Field("auto", description="Search source: auto (SearXNG with DDGS fallback), searxng, or ddgs")
 
 
@@ -24,7 +24,7 @@ async def _search_searxng(query: str, max_results: int, region: str) -> list[dic
         "q": query,
         "format": "json",
         "categories": "general",
-        "language": region if region != "wt-wt" else "all",
+        "language": "all" if region == "wt-wt" else region.split("-")[-1] if "-" in region else region,
     }
     headers = {}
     if SEARXNG_KEY:
