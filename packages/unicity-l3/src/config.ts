@@ -5,16 +5,12 @@ export interface L3Config {
   tokensDir: string;
   aggregatorUrl: string;
   explorerBaseUrl: string;
-  groupId: string;
+  groupId: string | undefined;
   pollIntervalMs: number;
+  showEmptyBlocks: boolean;
 }
 
 export function loadConfig(): L3Config {
-  const groupId = process.env.GROUP_ID;
-  if (!groupId) {
-    throw new Error('GROUP_ID environment variable is required');
-  }
-
   return {
     network: (process.env.NETWORK || 'testnet') as L3Config['network'],
     nametag: process.env.BOT_NAMETAG || 'unicity-l3',
@@ -22,7 +18,8 @@ export function loadConfig(): L3Config {
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     aggregatorUrl: process.env.AGGREGATOR_URL || 'https://goggregator-test.unicity.network/',
     explorerBaseUrl: process.env.EXPLORER_BASE_URL || 'https://unicitynetwork.github.io/smt-explorer/',
-    groupId,
-    pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '10000', 10),
+    groupId: process.env.GROUP_ID || undefined,
+    pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '1500', 10),
+    showEmptyBlocks: process.env.SHOW_EMPTY_BLOCKS === 'true',
   };
 }

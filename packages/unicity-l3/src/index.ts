@@ -1,21 +1,47 @@
+import { readFileSync, renameSync } from 'node:fs';
+import { join } from 'node:path';
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
-import { AggregatorClient } from './aggregator.js';
+import { AggregatorClient, displayShardId } from './aggregator.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
 const log = (msg: string) => console.log(`[unicity-l3] ${msg}`);
 
-async function main() {
-  log('Starting...');
-
-  // Init Sphere with group chat support
+async function initSphere() {
   const providers = createNodeProviders({
     dataDir: config.dataDir,
     tokensDir: config.tokensDir,
     network: config.network,
   });
 
+  // Check if an exported wallet JSON (sphere-wallet format) is waiting to be imported
+  const importFile = join(config.dataDir, 'import-wallet.json');
+  try {
+    const raw = readFileSync(importFile, 'utf-8');
+    const data = JSON.parse(raw);
+    if (data.type === 'sphere-wallet') {
+      log('Found import-wallet.json — importing...');
+      const result = await Sphere.importFromJSON({
+        ...providers,
+        jsonContent: raw,
+        nametag: config.nametag,
+        groupChat: true,
+      });
+      if (!result.success) {
+        throw new Error(`Import failed: ${result.error}`);
+      }
+      // Rename so we don't re-import on next restart
+      renameSync(importFile, join(config.dataDir, 'import-wallet.json.done'));
+      log('Wallet imported successfully');
+    }
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw err;
+    }
+  }
+
+  // Normal init — loads existing wallet or auto-generates new one
   const { sphere, created, generatedMnemonic } = await Sphere.init({
     ...providers,
     autoGenerate: true,
@@ -30,6 +56,28 @@ async function main() {
     }
   } else {
     log(`Wallet loaded. Nametag: ${config.nametag}`);
+  }
+
+  return sphere;
+}
+
+async function main() {
+  log('Starting...');
+
+  const sphere = await initSphere();
+
+  // Log Nostr pubkey so it can be used to create/join groups
+  const identity = sphere.identity;
+  if (identity) {
+    const nostrPubkey = identity.chainPubkey.slice(2); // x-only 32 bytes
+    log(`Nostr pubkey: ${nostrPubkey}`);
+  }
+
+  if (!config.groupId) {
+    log('GROUP_ID not set. Set it and restart to begin posting block updates.');
+    // Keep process alive so the wallet persists
+    setInterval(() => {}, 60000);
+    return;
   }
 
   // Connect group chat
@@ -50,21 +98,21 @@ async function main() {
 
   // Init aggregator client and discover shards
   const aggregator = new AggregatorClient(config.aggregatorUrl);
-  const shards = await aggregator.fetchShards();
-  log(`Discovered ${shards.length} shard(s): ${shards.map((s) => s.id).join(', ')}`);
+  const shardIds = await aggregator.fetchShardIds();
+  log(`Discovered ${shardIds.length} shard(s): ${shardIds.join(', ')}`);
 
   // Track last seen block per shard
   const lastBlock = new Map<string, number>();
 
   // Initialize with current block heights
-  for (const shard of shards) {
+  for (const shardId of shardIds) {
     try {
-      const height = await aggregator.getBlockHeight(shard.id);
-      lastBlock.set(shard.id, height);
-      log(`Shard ${shard.id}: current block height ${height}`);
+      const height = await aggregator.getBlockHeight(shardId);
+      lastBlock.set(shardId, height);
+      log(`Shard ${shardId}: current block height ${height}`);
     } catch (err) {
-      log(`Failed to get initial height for shard ${shard.id}: ${err}`);
-      lastBlock.set(shard.id, 0);
+      log(`Failed to get initial height for shard ${shardId}: ${err}`);
+      lastBlock.set(shardId, 0);
     }
   }
 
@@ -72,10 +120,10 @@ async function main() {
 
   // Poll loop
   const poll = async () => {
-    for (const shard of shards) {
+    for (const shardId of shardIds) {
       try {
-        const height = await aggregator.getBlockHeight(shard.id);
-        const prev = lastBlock.get(shard.id) || 0;
+        const height = await aggregator.getBlockHeight(shardId);
+        const prev = lastBlock.get(shardId) || 0;
 
         if (height <= prev) continue;
 
@@ -83,20 +131,22 @@ async function main() {
         const start = Math.max(prev + 1, height - 9);
         for (let blockNr = start; blockNr <= height; blockNr++) {
           try {
-            const block = await aggregator.getBlock(blockNr, shard.id);
-            const explorerUrl = `${config.explorerBaseUrl}?shard=${shard.id}&block=${blockNr}`;
-            const message = `Block #${blockNr} | Shard ${shard.id} | ${block.totalCommitments} tx | ${explorerUrl}`;
+            const block = await aggregator.getBlock(blockNr, shardId);
+            if (!config.showEmptyBlocks && block.totalCommitments === 0) continue;
+            const shard = displayShardId(shardId);
+            const explorerUrl = `${config.explorerBaseUrl}?shard=${shardId}&block=${blockNr}`;
+            const message = `Block #${blockNr} | Shard ${shard} | ${block.totalCommitments} tx | ${explorerUrl}`;
 
             log(`Posting: ${message}`);
-            await groupChat.sendMessage(config.groupId, message);
+            await groupChat.sendMessage(config.groupId!, message);
           } catch (err) {
-            log(`Failed to process block ${blockNr} shard ${shard.id}: ${err}`);
+            log(`Failed to process block ${blockNr} shard ${shardId}: ${err}`);
           }
         }
 
-        lastBlock.set(shard.id, height);
+        lastBlock.set(shardId, height);
       } catch (err) {
-        log(`Poll error shard ${shard.id}: ${err}`);
+        log(`Poll error shard ${shardId}: ${err}`);
       }
     }
   };

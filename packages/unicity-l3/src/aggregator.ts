@@ -1,6 +1,9 @@
-export interface ShardConfig {
-  id: string;
-  alphabillUrl: string;
+/** Strip the leading 1-bit prefix to get the human-readable shard ID.
+ *  e.g. 2 (0b10) → "0", 3 (0b11) → "1" */
+export function displayShardId(rawId: string): string {
+  const n = parseInt(rawId);
+  const bits = n.toString(2); // e.g. "10" or "11"
+  return bits.slice(1) || '0';  // drop the leading "1" prefix
 }
 
 export interface BlockData {
@@ -17,23 +20,28 @@ export class AggregatorClient {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 
-  async fetchShards(): Promise<ShardConfig[]> {
+  async fetchShardIds(): Promise<string[]> {
     const res = await fetch(`${this.baseUrl}/config/shards`);
     if (!res.ok) throw new Error(`Failed to fetch shards: ${res.status}`);
-    return res.json() as Promise<ShardConfig[]>;
+    const data = (await res.json()) as { shardIds: number[] };
+    return data.shardIds.map((id) => String(id));
   }
 
   async getBlockHeight(shardId: string): Promise<number> {
-    const result = await this.rpc('get_block_height', { shard_id: shardId });
-    return result as number;
+    const result = await this.rpc('get_block_height', { shardId }) as { blockNumber: string };
+    return parseInt(result.blockNumber);
   }
 
   async getBlock(blockNumber: number, shardId: string): Promise<BlockData> {
     const result = await this.rpc('get_block', {
-      block_number: blockNumber,
-      shard_id: shardId,
-    });
-    return result as BlockData;
+      blockNumber: blockNumber.toString(),
+      shardId,
+    }) as { block?: { index: number; shardId: string }; totalCommitments?: string };
+    return {
+      index: result.block?.index ?? blockNumber,
+      shardId: result.block?.shardId ?? shardId,
+      totalCommitments: result.totalCommitments ? parseInt(result.totalCommitments) : 0,
+    };
   }
 
   private async rpc(method: string, params: Record<string, unknown>): Promise<unknown> {
