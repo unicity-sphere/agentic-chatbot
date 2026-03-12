@@ -1,6 +1,6 @@
 # Agentic Chatbot
 
-A modular, agentic chatbot platform built with React, Node.js, and the Model Context Protocol (MCP). Features multiple AI-powered "activities" (personalities/agents) that can use custom tools via MCP servers, plus a standalone knowledge base bot that communicates via Nostr DMs.
+A modular, agentic chatbot platform built with React, Node.js, and the Model Context Protocol (MCP). Features a standalone knowledge base bot that communicates via Nostr DMs.
 
 ## Architecture Overview
 
@@ -42,18 +42,6 @@ A modular, agentic chatbot platform built with React, Node.js, and the Model Con
 - **MCP**: Model Context Protocol for modular tool servers
 - **KBBot**: Sphere SDK (Nostr DMs), standalone Node.js service
 
-## Packages
-
-| Package | Port | Description |
-|---------|------|-------------|
-| `packages/ui` | 5173 | React frontend with activity selector and chat UI |
-| `packages/agent-server` | 3000 | Main backend — LLM orchestration, MCP client, streaming |
-| `packages/mcp-trivia` | 3001 | MCP server for trivia game (questions, scoring, payments) |
-| `packages/mcp-web-py` | 3002 | MCP server for web search and page fetching (Python) |
-| `packages/mcp-rag` | 3003 | MCP server for RAG semantic search over docs (Python/ChromaDB) |
-| `packages/kbbot` | 3004 | Knowledge base bot — answers questions via Nostr DMs |
-| `packages/shared` | — | Shared TypeScript types |
-
 ## Quick Start
 
 ### Prerequisites
@@ -78,20 +66,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Services:
-- Frontend: http://localhost:5173
-- Agent Server: http://localhost:3000
-- Trivia MCP: http://localhost:3001
-- Web MCP: http://localhost:3002
-- RAG MCP: http://localhost:3003
-- KBBot: http://localhost:3004
-
 ### Local Development (without Docker)
 
 ```bash
-# MCP Trivia Server
-cd packages/mcp-trivia && pnpm dev
-
 # MCP Web Server (Python)
 cd packages/mcp-web-py
 python -m venv venv && source venv/bin/activate
@@ -102,26 +79,12 @@ cd packages/mcp-rag
 python -m venv venv && source venv/bin/activate
 pip install -e . && python -m src.server
 
-# Agent Server
-cd packages/agent-server && pnpm dev
-
 # KBBot
 cd packages/kbbot && pnpm dev
 
-# Frontend
-cd packages/ui && pnpm dev
 ```
 
 ## Core Concepts
-
-### Activities
-
-Each activity represents a distinct agent/personality with:
-- Unique system prompt and personality
-- Specific LLM model and configuration
-- Access to specific MCP servers (tools)
-- Optional local tools (e.g., memory)
-- Theme and UI customization
 
 ### MCP Servers
 
@@ -177,11 +140,6 @@ docker compose restart mcp-rag
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GOOGLE_API_KEY` | *required* | Gemini API key |
-| `AMA_API_KEY` | — | OpenAI-compatible API key (supports comma-separated failover) |
-| `AMA_API_URL` | — | OpenAI-compatible base URL (supports comma-separated failover) |
-| `CORS_ORIGIN` | `http://localhost:5173` | Allowed origins (comma-separated) |
-| `API_BASE_URL` | `http://localhost:5173` | Base URL for image proxying |
-| `MCP_TRIVIA_URL` | `http://mcp-trivia:3001/mcp` | Trivia MCP server URL |
 | `MCP_WEB_URL` | `http://mcp-web:3002/mcp` | Web MCP server URL |
 | `MCP_RAG_URL` | `http://mcp-rag:3003/mcp` | RAG MCP server URL |
 | `DEBUG_PROMPTS` | `false` | Log system prompts |
@@ -198,74 +156,13 @@ docker compose restart mcp-rag
 | `KBBOT_LLM_BASE_URL` | — | Custom LLM endpoint URL |
 | `KBBOT_NAMETAG` | `kbbot` | Bot's nametag on Sphere |
 | `KBBOT_NETWORK` | `testnet` | Sphere network (`mainnet`/`testnet`/`dev`) |
-| `KBBOT_WELCOME_DELAY_MS` | `4000` | Delay before sending welcome DM |
 | `KBBOT_MAX_HISTORY_MESSAGES` | `20` | Max conversation turns per user |
 | `MCP_RAG_URL` | `http://mcp-rag:3003/mcp` | RAG MCP server URL |
 | `MCP_WEB_URL` | `http://mcp-web:3002/mcp` | Web MCP server URL |
 
-### Build-Time Variables
+### Other bots
 
-`VITE_API_URL` is a build-time variable for the frontend:
-```bash
-# Default
-VITE_API_URL=http://localhost:3000
-
-# Production — set before building
-VITE_API_URL=https://api.yourdomain.com docker compose build ui
-```
-
-## Adding New Activities
-
-### 1. Create Activity Configuration
-
-```typescript
-// packages/agent-server/src/config/activities/my-activity.ts
-import type { ActivityConfig } from '@agentic/shared';
-
-export const myActivity: ActivityConfig = {
-    id: 'my-activity',
-    name: 'My Custom Agent',
-    description: 'A helpful agent that does X',
-    greetingMessage: "Hello! I can help you with X.",
-
-    systemPrompt: `You are a helpful AI assistant specialized in X.
-...`,
-
-    llm: {
-        provider: 'gemini',              // or 'openai-compatible'
-        model: 'gemini-2.5-flash',
-        temperature: 0.7,
-    },
-
-    mcpServers: [
-        {
-            name: 'my-mcp-server',
-            url: process.env.MY_MCP_URL || 'http://localhost:3003/mcp',
-        },
-    ],
-
-    localTools: ['memory'],
-
-    theme: {
-        primaryColor: '#3b82f6',
-        name: 'my-activity',
-    },
-
-    persistChatHistory: true,
-};
-```
-
-### 2. Register Activity
-
-```typescript
-// packages/agent-server/src/config/activities/index.ts
-import { myActivity } from './my-activity.js';
-
-const activities: Record<string, ActivityConfig> = {
-    // ... existing activities
-    'my-activity': myActivity,
-};
-```
+See Viktor etc.
 
 ### 3. Rebuild
 
@@ -293,29 +190,6 @@ llm: {
     apiKey: process.env.OPENAI_API_KEY,
     temperature: 0.7,
 }
-```
-
-## System Prompt Templating
-
-Activities support dynamic template tags in system prompts:
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `{{userId}}` | `user_abc12345` | User identifier |
-| `{{serverTime}}` | `2025-12-02T14:30:00Z` | Server time (UTC) |
-| `{{userTimezone}}` | `Europe/Tallinn` | User's timezone |
-| `{{localTime}}` | `12/02/2025, 16:30:00` | User's local time |
-| `{{userCountry}}` | `EE` | Country code |
-| `{{userLocale}}` | `et-EE` | Locale |
-| `{{userLanguage}}` | `et` | Language code |
-
-Supports conditional blocks:
-```
-{{#if userTimezone}}
-User's timezone: {{userTimezone}}
-{{else}}
-Timezone unknown — using UTC.
-{{/if}}
 ```
 
 ## Creating MCP Servers
@@ -392,35 +266,6 @@ The `data/` directory is gitignored. Use the backup/restore script to migrate be
 ./scripts/bot-backup.sh restore kbbot   # extracts into data/kbbot/
 ./scripts/bot-backup.sh restore viktor  # extracts into data/viktor/
 ```
-
-## Troubleshooting
-
-### MCP Connection Errors
-
-**"Server already initialized"** — Restart the agent-server container. The MCP manager uses persistent connections that may stale.
-
-### CORS Errors
-
-Verify `CORS_ORIGIN` in `.env` matches your frontend URL exactly. For multiple origins:
-```
-CORS_ORIGIN=http://localhost:5173,https://yourdomain.com
-```
-
-### KBBot not responding to DMs
-
-1. Check `docker compose logs kbbot` for connection errors
-2. Verify `KBBOT_LLM_API_KEY` is set
-3. Check MCP server connectivity: `docker compose logs mcp-rag mcp-web`
-4. Health check: `curl http://localhost:3004/health`
-
-### Build Errors
-
-**"pnpm lockfile out of date":**
-```bash
-pnpm install && docker compose build
-```
-
-**`VITE_API_URL` not defined** — it's a build-time variable, set it before building the UI.
 
 ## Additional Resources
 
