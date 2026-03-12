@@ -69,6 +69,7 @@ export function loadConfig(): SphereBotConfig {
     nametag: process.env.BOT_NAMETAG || 'viktor',
     systemPrompt: SYSTEM_PROMPT,
     welcomeMessage: WELCOME_MESSAGE,
+    welcomeTrigger: '__sphere_welcome__',
     maxHistoryMessages: parseInt(process.env.MAX_HISTORY_MESSAGES || '10', 10),
     maxSteps: 4,
     maxToolResultChars: 200000,
