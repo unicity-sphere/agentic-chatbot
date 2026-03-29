@@ -268,7 +268,8 @@ export class ChessBot {
       }
     } catch {}
 
-    const amount = String(ENTRY_FEE * Math.pow(10, decimals));
+    // Use BigInt to avoid floating-point overflow at 18 decimals
+    const amount = (BigInt(ENTRY_FEE) * 10n ** BigInt(decimals)).toString();
 
     try {
       const result = await this.sphere.payments.send({

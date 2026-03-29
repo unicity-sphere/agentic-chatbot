@@ -113,7 +113,7 @@ services:
       NETWORK: ${CHESS_BOT_NETWORK:-testnet}
       BOT_NAMETAG: ${CHESS_BOT_NAMETAG:-chess-bot}
       UCT_COIN_ID: ${UCT_COIN_ID:-}
-      UCT_DECIMALS: ${UCT_DECIMALS:-8}
+      UCT_DECIMALS: ${UCT_DECIMALS:-18}
       MAX_CONCURRENT_GAMES: ${MAX_CONCURRENT_GAMES:-10}
       GROUP_ID: ${CHESS_BOT_GROUP_ID:-chess}
       DATA_DIR: /app/data

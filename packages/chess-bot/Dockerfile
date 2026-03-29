@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 RUN corepack enable pnpm
 
@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile
 COPY packages/chess-bot ./packages/chess-bot
 RUN pnpm --filter @agentic/chess-bot build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 RUN corepack enable pnpm
 

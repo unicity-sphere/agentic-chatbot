@@ -30,7 +30,7 @@ export function loadConfig(): ChessBotConfig {
     uctCoinId:
       process.env.UCT_COIN_ID ||
       '455ad8720656b08e8dbd5bac1f3c73eeea5431565f6c1c3af742b1aa12d41d89',
-    uctDecimals: parseInt(process.env.UCT_DECIMALS || '8', 10),
+    uctDecimals: parseInt(process.env.UCT_DECIMALS || '18', 10),
     maxConcurrentGames: parseInt(process.env.MAX_CONCURRENT_GAMES || '10', 10),
     faucetUrl:
       process.env.FAUCET_URL ||
