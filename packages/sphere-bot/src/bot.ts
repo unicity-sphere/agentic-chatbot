@@ -38,6 +38,8 @@ export class SphereBot {
       l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
+      // Force DM lookback to 24h ago to avoid stale future timestamps from NIP-17 randomization
+      dmSince: Math.floor(Date.now() / 1000) - 86400,
     });
 
     this.sphere = sphere;
