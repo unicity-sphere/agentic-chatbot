@@ -9,13 +9,20 @@ import {
   type GameOverReason,
 } from './protocol.js';
 
+export interface GameEndInfo {
+  gameId: string;
+  result: GameOverResult | null;
+  reason: GameOverReason | null;
+  pgn: string;
+}
+
 export interface GameOptions {
   gameId: string;
   myColor: 'w' | 'b';
   timeControlMs: number;
   elo: number;
   sendMessage: (msg: string) => Promise<void>;
-  onGameEnd: (gameId: string) => void;
+  onGameEnd: (info: GameEndInfo) => void;
 }
 
 export class Game {
@@ -32,7 +39,7 @@ export class Game {
   private heartbeatInterval?: ReturnType<typeof setInterval>;
   private ended = false;
   private sendMessage: (msg: string) => Promise<void>;
-  private onGameEnd: (gameId: string) => void;
+  private onGameEnd: (info: GameEndInfo) => void;
   private tag: string;
 
   constructor(options: GameOptions) {
@@ -251,7 +258,7 @@ export class Game {
     }
 
     this.engine.destroy();
-    this.onGameEnd(this.gameId);
+    this.onGameEnd({ gameId: this.gameId, result, reason, pgn: this.chess.pgn() });
   }
 
   private calculateThinkTime(): number {
@@ -294,7 +301,7 @@ export class Game {
     this.ended = true;
     this.stopHeartbeat();
     this.engine.destroy();
-    this.onGameEnd(this.gameId);
+    this.onGameEnd({ gameId: this.gameId, result: null, reason: null, pgn: this.chess.pgn() });
   }
 }
 

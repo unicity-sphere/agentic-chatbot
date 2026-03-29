@@ -9,7 +9,7 @@ import {
   ENTRY_FEE,
   type ChallengeMessage,
 } from './protocol.js';
-import { Game } from './game.js';
+import { Game, type GameEndInfo } from './game.js';
 import type { ChessBotConfig } from './config.js';
 
 // Polyfill WebSocket for Node.js (required by sphere-sdk)
@@ -39,6 +39,7 @@ export class ChessBot {
       ...providers,
       autoGenerate: true,
       nametag: this.config.nametag,
+      groupChat: !!this.config.groupId,
     });
 
     this.sphere = sphere;
@@ -94,6 +95,24 @@ export class ChessBot {
         console.error(`${this.tag} Error handling message:`, err);
       }
     });
+
+    // Join group chat for posting game results
+    if (this.config.groupId) {
+      try {
+        const groupChat = (sphere as any).groupChat;
+        if (groupChat) {
+          await groupChat.connect();
+          try {
+            await groupChat.joinGroup(this.config.groupId);
+            console.log(`${this.tag} Joined group ${this.config.groupId}`);
+          } catch {
+            console.log(`${this.tag} Already in group or join not needed`);
+          }
+        }
+      } catch (err) {
+        console.error(`${this.tag} Group chat setup failed:`, err);
+      }
+    }
 
     console.log(`${this.tag} Ready — listening for challenges`);
   }
@@ -159,9 +178,12 @@ export class ChessBot {
       timeControlMs: challenge.timeMinutes * 60 * 1000,
       elo: challenge.elo,
       sendMessage: (msg) => this.sendDM(senderPubkey, msg),
-      onGameEnd: (gameId) => {
-        this.games.delete(gameId);
-        console.log(`${this.tag} Game ${gameId} ended (${this.games.size} active)`);
+      onGameEnd: (info) => {
+        this.games.delete(info.gameId);
+        console.log(`${this.tag} Game ${info.gameId} ended (${this.games.size} active)`);
+        this.postGameResult(info, label, challenge.elo, myColor).catch((err) =>
+          console.error(`${this.tag} Failed to post game result:`, err),
+        );
       },
     });
 
@@ -257,6 +279,40 @@ export class ChessBot {
     } catch (err) {
       console.error(`${this.tag} Deposit error:`, err);
       return false;
+    }
+  }
+
+  private async postGameResult(info: GameEndInfo, opponentLabel: string, elo: number, botColor: 'w' | 'b'): Promise<void> {
+    if (!this.config.groupId || !this.sphere || !info.result) return;
+
+    const botName = `@${this.sphere.identity?.nametag ?? this.config.nametag}`;
+    const botSide = botColor === 'w' ? '♔' : '♚';
+    const oppSide = botColor === 'w' ? '♚' : '♔';
+    const white = botColor === 'w' ? `${botName} (ELO ${elo})` : opponentLabel;
+    const black = botColor === 'b' ? `${botName} (ELO ${elo})` : opponentLabel;
+
+    const outcome =
+      info.result === 'd'
+        ? `Draw by ${info.reason}`
+        : info.result === botColor
+          ? `${botName} wins by ${info.reason}`
+          : `${opponentLabel} wins by ${info.reason}`;
+
+    const lines = [
+      `♟ ${botSide} ${white} vs ${oppSide} ${black}`,
+      outcome,
+      '',
+      info.pgn || '(no moves)',
+    ];
+
+    try {
+      const groupChat = (this.sphere as any).groupChat;
+      if (groupChat) {
+        await groupChat.sendMessage(this.config.groupId, lines.join('\n'));
+        console.log(`${this.tag} Posted game result to group`);
+      }
+    } catch (err) {
+      console.error(`${this.tag} Group message error:`, err);
     }
   }
 

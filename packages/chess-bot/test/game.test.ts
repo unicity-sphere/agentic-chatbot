@@ -107,7 +107,7 @@ describe('Game', () => {
       timeControlMs: 300_000,
       elo: 1500,
       sendMessage: async (msg) => { sent.push(msg); },
-      onGameEnd: (id) => { endedGameId = id; },
+      onGameEnd: (info) => { endedGameId = info.gameId; },
     });
 
     await game.start();
@@ -139,7 +139,7 @@ describe('Game', () => {
       timeControlMs: 300_000,
       elo: 1500,
       sendMessage: async () => {},
-      onGameEnd: (id) => { endedGameId = id; },
+      onGameEnd: (info) => { endedGameId = info.gameId; },
     });
 
     await game.start();
@@ -165,7 +165,7 @@ describe('Game', () => {
       timeControlMs: 300_000,
       elo: 2100,
       sendMessage: async (msg) => { sent.push(msg); },
-      onGameEnd: (id) => { endedGameId = id; },
+      onGameEnd: (info) => { endedGameId = info.gameId; },
     });
 
     await game.start();

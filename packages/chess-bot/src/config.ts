@@ -17,6 +17,8 @@ export interface ChessBotConfig {
   faucetUrl: string;
   /** Amount of UCT to request from faucet when balance is low */
   faucetTopUpAmount: number;
+  /** Group chat ID for posting game results (optional) */
+  groupId?: string;
 }
 
 export function loadConfig(): ChessBotConfig {
@@ -34,5 +36,6 @@ export function loadConfig(): ChessBotConfig {
       process.env.FAUCET_URL ||
       'https://faucet.unicity.network/api/v1/faucet/request',
     faucetTopUpAmount: parseInt(process.env.FAUCET_TOPUP_AMOUNT || '100', 10),
+    groupId: process.env.GROUP_ID || undefined,
   };
 }
