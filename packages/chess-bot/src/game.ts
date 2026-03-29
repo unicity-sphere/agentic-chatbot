@@ -36,7 +36,9 @@ export class Game {
   private opponentClockMs: number;
   private turnStartedAt = 0;
   private moveCount = 0;
-  private heartbeatInterval?: ReturnType<typeof setInterval>;
+  private lastAppliedOpponentMoveNum = 0;
+  private pollInterval?: ReturnType<typeof setInterval>;
+  private lastMoveSent: { san: string; color: 'w' | 'b'; moveNum: number } | null = null;
   private ended = false;
   private lastOpponentActivity = 0;
   private timeControlMs: number;
@@ -81,7 +83,7 @@ export class Game {
       this.turnStartedAt = Date.now();
       await this.makeMove();
     } else {
-      this.startHeartbeat();
+      this.startPolling();
     }
   }
 
@@ -89,10 +91,15 @@ export class Game {
     if (this.ended) return;
 
     switch (msg.action) {
-      case ACTION.MOVE:
+      case ACTION.MOVE: {
         this.lastOpponentActivity = Date.now();
-        await this.handleOpponentMove(msg.san, msg.clockMs);
+        // Reject moves claiming to be from our color
+        if (msg.color === this.myColor) return;
+        // Dedup by moveNum
+        if (msg.moveNum > 0 && msg.moveNum <= this.lastAppliedOpponentMoveNum) return;
+        await this.handleOpponentMove(msg.san, msg.clockMs, msg.moveNum);
         break;
+      }
       case ACTION.HEARTBEAT:
         this.lastOpponentActivity = Date.now();
         this.opponentClockMs = msg.clockMs;
@@ -102,7 +109,6 @@ export class Game {
         await this.endGame(this.myColor, 'resign');
         break;
       case ACTION.DRAW_OFFER:
-        // Bot always declines draws
         await this.sendMessage(
           encodeMessage({ action: ACTION.DRAW_DECLINE, gameId: this.gameId }),
         );
@@ -122,8 +128,8 @@ export class Game {
     }
   }
 
-  private async handleOpponentMove(san: string, clockMs: number): Promise<void> {
-    this.stopHeartbeat();
+  private async handleOpponentMove(san: string, clockMs: number, moveNum: number): Promise<void> {
+    this.stopPolling();
     this.opponentClockMs = clockMs;
 
     try {
@@ -134,12 +140,11 @@ export class Game {
     }
 
     this.moveCount++;
-    console.log(`${this.tag} Opponent: ${san} (clock: ${clockMs}ms)`);
+    this.lastAppliedOpponentMoveNum = moveNum;
+    console.log(`${this.tag} Opponent: ${san} #${moveNum} (clock: ${clockMs}ms)`);
 
-    // Check if game ended after opponent's move (e.g. opponent checkmated us)
     if (this.checkTerminal()) return;
 
-    // Our turn
     this.turnStartedAt = Date.now();
     await this.makeMove();
   }
@@ -164,7 +169,6 @@ export class Game {
 
     if (this.ended) return;
 
-    // Convert UCI move (e.g. e2e4) to SAN (e.g. e4) via chess.js
     const from = uciMove.slice(0, 2);
     const to = uciMove.slice(2, 4);
     const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
@@ -182,13 +186,11 @@ export class Game {
       return;
     }
 
-    // Update clock
     const elapsed = Date.now() - this.turnStartedAt;
     this.myClockMs -= elapsed;
     this.turnStartedAt = 0;
     this.moveCount++;
 
-    // Check timeout
     if (this.myClockMs <= 0) {
       this.myClockMs = 0;
       const winner = this.myColor === 'w' ? 'b' : 'w';
@@ -196,24 +198,14 @@ export class Game {
       return;
     }
 
-    // Send move message
-    const nextTurn = this.myColor === 'w' ? 'b' : 'w';
-    await this.sendMessage(
-      encodeMessage({
-        action: ACTION.MOVE,
-        gameId: this.gameId,
-        san,
-        clockMs: Math.max(0, Math.round(this.myClockMs)),
-        turn: nextTurn as 'w' | 'b',
-      }),
-    );
-    console.log(`${this.tag} Bot: ${san} (clock: ${Math.round(this.myClockMs)}ms)`);
+    this.lastMoveSent = { san, color: this.myColor, moveNum: this.moveCount };
+    await this.sendMessage(this.buildMoveMsg());
+    console.log(`${this.tag} Bot: ${san} #${this.moveCount} (clock: ${Math.round(this.myClockMs)}ms)`);
 
-    // Check if game ended after our move
     if (this.checkTerminal()) return;
 
-    // Wait for opponent's move
-    this.startHeartbeat();
+    // Poll: resend last move periodically until opponent responds
+    this.startPolling();
   }
 
   private checkTerminal(): boolean {
@@ -245,7 +237,7 @@ export class Game {
   private async endGame(result: GameOverResult, reason: GameOverReason): Promise<void> {
     if (this.ended) return;
     this.ended = true;
-    this.stopHeartbeat();
+    this.stopPolling();
 
     const outcome =
       result === 'd'
@@ -267,65 +259,75 @@ export class Game {
     this.onGameEnd({ gameId: this.gameId, result, reason, pgn: this.chess.pgn() });
   }
 
+  /** Build move message with current clock value (for accurate clock sync on resends) */
+  private buildMoveMsg(): string {
+    const m = this.lastMoveSent!;
+    return encodeMessage({
+      action: ACTION.MOVE,
+      gameId: this.gameId,
+      san: m.san,
+      clockMs: Math.max(0, Math.round(this.myClockMs)),
+      color: m.color,
+      moveNum: m.moveNum,
+    });
+  }
+
   private calculateThinkTime(): number {
     let thinkTime = Math.floor(this.myClockMs / 40);
     thinkTime = Math.max(200, thinkTime);
     thinkTime = Math.min(10_000, thinkTime);
-    // Leave buffer so we don't flag on time
     thinkTime = Math.min(thinkTime, this.myClockMs - 2000);
     return Math.max(100, thinkTime);
   }
 
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
-    this.heartbeatInterval = setInterval(async () => {
+  /**
+   * While waiting for the opponent, periodically resend the last move.
+   * This serves as both heartbeat and retry — the opponent deduplicates by moveNum.
+   * Also detects opponent disconnect/timeout.
+   */
+  private startPolling(): void {
+    this.stopPolling();
+    this.pollInterval = setInterval(async () => {
       if (this.ended) return;
 
-      // Detect opponent disconnect: no activity for the full time control duration
       const silenceMs = Date.now() - this.lastOpponentActivity;
+
+      // Opponent disconnect: no activity for the full time control duration
       if (silenceMs >= this.timeControlMs) {
-        console.log(`${this.tag} Opponent disconnected (no activity for ${Math.round(silenceMs / 1000)}s)`);
-        const winner = this.myColor;
-        await this.endGame(winner as GameOverResult, 'disconnect');
+        console.log(`${this.tag} Opponent disconnected (${Math.round(silenceMs / 1000)}s silence)`);
+        await this.endGame(this.myColor as GameOverResult, 'disconnect');
         return;
       }
 
-      // Detect opponent timeout: their clock ran out
-      // Estimate opponent clock: subtract silence from last known value
+      // Opponent timeout: their clock ran out
       const estimatedOpponentClock = this.opponentClockMs - silenceMs;
       if (estimatedOpponentClock <= 0 && this.moveCount > 0) {
         console.log(`${this.tag} Opponent timed out`);
-        const winner = this.myColor;
-        await this.endGame(winner as GameOverResult, 'timeout');
+        await this.endGame(this.myColor as GameOverResult, 'timeout');
         return;
       }
 
-      try {
-        await this.sendMessage(
-          encodeMessage({
-            action: ACTION.HEARTBEAT,
-            gameId: this.gameId,
-            clockMs: Math.max(0, Math.round(this.myClockMs)),
-          }),
-        );
-      } catch (err) {
-        console.error(`${this.tag} Heartbeat error:`, err);
+      // Resend last move with fresh clock as keep-alive + retry
+      if (this.lastMoveSent) {
+        try {
+          await this.sendMessage(this.buildMoveMsg());
+        } catch {}
       }
     }, HEARTBEAT_INTERVAL_MS);
   }
 
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = undefined;
+  private stopPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = undefined;
     }
+    this.lastMoveSent = null;
   }
 
-  /** External cleanup without sending game-over message. */
   cleanup(): void {
     if (this.ended) return;
     this.ended = true;
-    this.stopHeartbeat();
+    this.stopPolling();
     this.engine.destroy();
     this.onGameEnd({ gameId: this.gameId, result: null, reason: null, pgn: this.chess.pgn() });
   }

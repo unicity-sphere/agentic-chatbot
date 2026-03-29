@@ -56,7 +56,9 @@ export interface MoveMessage {
   gameId: string;
   san: string;
   clockMs: number;
-  turn: 'w' | 'b';
+  /** Color of the player who made this move */
+  color: 'w' | 'b';
+  moveNum: number;
 }
 
 export interface ResignMessage {
@@ -158,7 +160,7 @@ export function parseMessage(raw: string): ParsedMessage | null {
 
   switch (act) {
     case ACTION.CHALLENGE: {
-      if (parts.length < 6) return null;
+      if (parts.length < 5) return null;
       const color = parts[3];
       if (!color || !VALID_CHALLENGE_COLORS.has(color)) return null;
       const timeMinutes = parseInt(parts[4]!, 10);
@@ -182,12 +184,13 @@ export function parseMessage(raw: string): ParsedMessage | null {
       return { action: ACTION.DECLINE, gameId };
 
     case ACTION.MOVE: {
-      if (parts.length < 6) return null;
+      if (parts.length < 7) return null;
       const san = parts[3];
       const clockMs = parseInt(parts[4], 10);
-      const turn = parts[5];
-      if (!san || isNaN(clockMs) || (turn !== 'w' && turn !== 'b')) return null;
-      return { action: ACTION.MOVE, gameId, san, clockMs, turn };
+      const color = parts[5];
+      const moveNum = parseInt(parts[6], 10);
+      if (!san || isNaN(clockMs) || (color !== 'w' && color !== 'b') || isNaN(moveNum)) return null;
+      return { action: ACTION.MOVE, gameId, san, clockMs, color, moveNum };
     }
 
     case ACTION.RESIGN:
@@ -260,7 +263,7 @@ export function encodeMessage(msg: ParsedMessage): string {
     case ACTION.DECLINE:
       return `${prefix}:${ACTION.DECLINE}`;
     case ACTION.MOVE:
-      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.turn}`;
+      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.color}:${msg.moveNum}`;
     case ACTION.RESIGN:
       return `${prefix}:${ACTION.RESIGN}`;
     case ACTION.DRAW_OFFER:

@@ -4,8 +4,8 @@ import { parseMessage, encodeMessage, ACTION } from '../src/protocol.js';
 
 describe('protocol', () => {
   describe('parseMessage', () => {
-    it('parses challenge URL with elo', () => {
-      const raw = 'unicity-connect://chess.example.com?game=a1b2c3d4&action=ch&color=w&time=5&from=alice&elo=1300';
+    it('parses challenge with elo', () => {
+      const raw = 'unichess:a1b2c3d4:ch:w:5:1300';
       const msg = parseMessage(raw);
       assert.ok(msg);
       assert.equal(msg.action, ACTION.CHALLENGE);
@@ -14,12 +14,10 @@ describe('protocol', () => {
       assert.equal(msg.color, 'w');
       assert.equal(msg.timeMinutes, 5);
       assert.equal(msg.elo, 1300);
-      assert.equal(msg.from, 'alice');
     });
 
-    it('parses challenge URL without elo (defaults to 1500)', () => {
-      const raw = 'https://chess.example.com?game=abcd1234&action=ch&color=b&time=3&from=bob';
-      const msg = parseMessage(raw);
+    it('defaults elo to 1500 if missing', () => {
+      const msg = parseMessage('unichess:abcd1234:ch:b:3');
       assert.ok(msg);
       assert.equal(msg.action, ACTION.CHALLENGE);
       if (msg.action !== ACTION.CHALLENGE) return;
@@ -27,23 +25,28 @@ describe('protocol', () => {
     });
 
     it('clamps elo to 200-3000 range', () => {
-      const low = parseMessage('https://x.com?game=abcd1234&action=ch&color=w&time=5&elo=50');
+      const low = parseMessage('unichess:abcd1234:ch:w:5:50');
       assert.ok(low && low.action === ACTION.CHALLENGE);
       if (low.action === ACTION.CHALLENGE) assert.equal(low.elo, 200);
 
-      const high = parseMessage('https://x.com?game=abcd1234&action=ch&color=w&time=5&elo=9999');
+      const high = parseMessage('unichess:abcd1234:ch:w:5:9999');
       assert.ok(high && high.action === ACTION.CHALLENGE);
       if (high.action === ACTION.CHALLENGE) assert.equal(high.elo, 3000);
     });
 
-    it('parses move message', () => {
-      const msg = parseMessage('unichess:a1b2c3d4:mv:e4:298000:b');
+    it('parses move message with moveNum', () => {
+      const msg = parseMessage('unichess:a1b2c3d4:mv:e4:298000:b:3');
       assert.ok(msg);
       assert.equal(msg.action, ACTION.MOVE);
       if (msg.action !== ACTION.MOVE) return;
       assert.equal(msg.san, 'e4');
       assert.equal(msg.clockMs, 298000);
-      assert.equal(msg.turn, 'b');
+      assert.equal(msg.color, 'b');
+      assert.equal(msg.moveNum, 3);
+    });
+
+    it('rejects move message without moveNum', () => {
+      assert.equal(parseMessage('unichess:a1b2c3d4:mv:e4:298000:b'), null);
     });
 
     it('parses accept', () => {
@@ -107,10 +110,10 @@ describe('protocol', () => {
       );
     });
 
-    it('encodes move', () => {
+    it('encodes move with moveNum', () => {
       assert.equal(
-        encodeMessage({ action: ACTION.MOVE, gameId: 'a1b2c3d4', san: 'Nf3', clockMs: 295000, turn: 'b' }),
-        'unichess:a1b2c3d4:mv:Nf3:295000:b',
+        encodeMessage({ action: ACTION.MOVE, gameId: 'a1b2c3d4', san: 'Nf3', clockMs: 295000, color: 'b', moveNum: 5 }),
+        'unichess:a1b2c3d4:mv:Nf3:295000:b:5',
       );
     });
 
@@ -128,15 +131,23 @@ describe('protocol', () => {
       );
     });
 
+    it('encodes challenge', () => {
+      assert.equal(
+        encodeMessage({ action: ACTION.CHALLENGE, gameId: 'a1b2c3d4', color: 'w', timeMinutes: 5, elo: 1300 }),
+        'unichess:a1b2c3d4:ch:w:5:1300',
+      );
+    });
+
     it('roundtrips messages', () => {
       const cases = [
         'unichess:a1b2c3d4:ok',
         'unichess:a1b2c3d4:no',
-        'unichess:a1b2c3d4:mv:e4:300000:b',
+        'unichess:a1b2c3d4:mv:e4:300000:b:1',
         'unichess:a1b2c3d4:rs',
         'unichess:a1b2c3d4:hb:250000',
         'unichess:a1b2c3d4:go:d:stalemate',
         'unichess:a1b2c3d4:ab',
+        'unichess:a1b2c3d4:ch:w:5:1300',
       ];
       for (const raw of cases) {
         const parsed = parseMessage(raw);

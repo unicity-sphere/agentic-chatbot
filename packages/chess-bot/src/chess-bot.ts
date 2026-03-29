@@ -158,14 +158,16 @@ export class ChessBot {
       return;
     }
 
-    // Accept the challenge
-    await this.sendDM(
-      senderPubkey,
-      encodeMessage({ action: ACTION.ACCEPT, gameId: challenge.gameId }),
-    );
+    // Accept the challenge — send ok multiple times for reliability
+    const okMsg = encodeMessage({ action: ACTION.ACCEPT, gameId: challenge.gameId });
+    await this.sendDM(senderPubkey, okMsg);
     console.log(
       `${this.tag} Accepted game ${challenge.gameId} as ${myColor === 'w' ? 'white' : 'black'} (elo ${challenge.elo})`,
     );
+    // Resend ok after short delays to increase delivery chance
+    for (const delay of [2000, 5000]) {
+      setTimeout(() => this.sendDM(senderPubkey, okMsg).catch(() => {}), delay);
+    }
 
     // Create and start the game
     const game = new Game({

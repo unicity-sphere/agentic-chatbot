@@ -25,7 +25,7 @@ describe('Game', () => {
     assert.ok(moveMsg);
     assert.equal(moveMsg.action, ACTION.MOVE);
     if (moveMsg.action === ACTION.MOVE) {
-      assert.equal(moveMsg.turn, 'b'); // After white moves, it's black's turn
+      assert.equal(moveMsg.color, 'w'); // Bot is white, so color = w
       assert.ok(moveMsg.clockMs > 0);
       assert.ok(moveMsg.san.length >= 2);
     }
@@ -57,7 +57,8 @@ describe('Game', () => {
       gameId: 'test0002',
       san: 'e4',
       clockMs: 298000,
-      turn: 'b',
+      color: 'w',
+      moveNum: 1,
     });
 
     // Now bot should have responded with a move
@@ -66,7 +67,7 @@ describe('Game', () => {
     const parsed = parseMessage(botMoves[0]);
     assert.ok(parsed && parsed.action === ACTION.MOVE);
     if (parsed.action === ACTION.MOVE) {
-      assert.equal(parsed.turn, 'w'); // After black moves, it's white's turn
+      assert.equal(parsed.color, 'b'); // Bot is black, so color = b
     }
 
     game.cleanup();
@@ -172,13 +173,15 @@ describe('Game', () => {
 
     // Play through opponent responses until game ends or moves exhausted
     while (moveIndex < opponentMoves.length && !endedGameId) {
-      const opMove = opponentMoves[moveIndex++];
+      const opMove = opponentMoves[moveIndex];
+      moveIndex++;
       await game.handleMessage({
         action: ACTION.MOVE,
         gameId: 'test0006',
         san: opMove,
         clockMs: 290000,
-        turn: 'w',
+        color: 'w',
+        moveNum: moveIndex * 2, // even numbers for opponent moves
       });
     }
 
