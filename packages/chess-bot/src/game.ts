@@ -38,6 +38,8 @@ export class Game {
   private moveCount = 0;
   private heartbeatInterval?: ReturnType<typeof setInterval>;
   private ended = false;
+  private lastOpponentActivity = 0;
+  private timeControlMs: number;
   private sendMessage: (msg: string) => Promise<void>;
   private onGameEnd: (info: GameEndInfo) => void;
   private tag: string;
@@ -52,6 +54,8 @@ export class Game {
     this.opponentClockMs = options.timeControlMs;
     this.sendMessage = options.sendMessage;
     this.onGameEnd = options.onGameEnd;
+    this.timeControlMs = options.timeControlMs;
+    this.lastOpponentActivity = Date.now();
     this.tag = `[game:${options.gameId}]`;
 
     this.engine.on('exit', () => {
@@ -86,9 +90,11 @@ export class Game {
 
     switch (msg.action) {
       case ACTION.MOVE:
+        this.lastOpponentActivity = Date.now();
         await this.handleOpponentMove(msg.san, msg.clockMs);
         break;
       case ACTION.HEARTBEAT:
+        this.lastOpponentActivity = Date.now();
         this.opponentClockMs = msg.clockMs;
         break;
       case ACTION.RESIGN:
@@ -274,6 +280,26 @@ export class Game {
     this.stopHeartbeat();
     this.heartbeatInterval = setInterval(async () => {
       if (this.ended) return;
+
+      // Detect opponent disconnect: no activity for the full time control duration
+      const silenceMs = Date.now() - this.lastOpponentActivity;
+      if (silenceMs >= this.timeControlMs) {
+        console.log(`${this.tag} Opponent disconnected (no activity for ${Math.round(silenceMs / 1000)}s)`);
+        const winner = this.myColor;
+        await this.endGame(winner as GameOverResult, 'disconnect');
+        return;
+      }
+
+      // Detect opponent timeout: their clock ran out
+      // Estimate opponent clock: subtract silence from last known value
+      const estimatedOpponentClock = this.opponentClockMs - silenceMs;
+      if (estimatedOpponentClock <= 0 && this.moveCount > 0) {
+        console.log(`${this.tag} Opponent timed out`);
+        const winner = this.myColor;
+        await this.endGame(winner as GameOverResult, 'timeout');
+        return;
+      }
+
       try {
         await this.sendMessage(
           encodeMessage({
