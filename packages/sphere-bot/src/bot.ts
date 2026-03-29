@@ -35,6 +35,7 @@ export class SphereBot {
 
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,
+      l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
     });
