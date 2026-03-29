@@ -38,9 +38,7 @@ export interface ChallengeMessage {
   gameId: string;
   color: ChallengeColor;
   timeMinutes: number;
-  gameUrl: string;
   elo: number;
-  from?: string;
 }
 
 export interface AcceptMessage {
@@ -135,59 +133,20 @@ const VALID_GAMEOVER_REASONS = new Set([
   'disconnect',
 ]);
 
-function parseChallengeUrl(raw: string): ChallengeMessage | null {
-  try {
-    if (
-      !raw.startsWith('http://') &&
-      !raw.startsWith('https://') &&
-      !raw.startsWith('unicity-connect://')
-    )
-      return null;
-
-    const normalized = raw.replace(/^unicity-connect:\/\//, 'https://');
-    const url = new URL(normalized);
-
-    const action = url.searchParams.get('action');
-    if (action !== 'ch') return null;
-
-    const gameId = url.searchParams.get('game');
-    if (!gameId || gameId.length !== GAME_ID_LENGTH) return null;
-
-    const color = url.searchParams.get('color');
-    if (!color || !VALID_CHALLENGE_COLORS.has(color)) return null;
-
-    const timeStr = url.searchParams.get('time');
-    if (!timeStr) return null;
-    const timeMinutes = parseInt(timeStr, 10);
-    if (isNaN(timeMinutes) || timeMinutes <= 0) return null;
-
-    const from = url.searchParams.get('from') || undefined;
-    const eloStr = url.searchParams.get('elo');
-    const elo = eloStr ? parseInt(eloStr, 10) : DEFAULT_ELO;
-    const clampedElo = isNaN(elo) ? DEFAULT_ELO : Math.max(200, Math.min(3000, elo));
-
-    return {
-      action: ACTION.CHALLENGE,
-      gameId,
-      color: color as ChallengeColor,
-      timeMinutes,
-      gameUrl: raw,
-      elo: clampedElo,
-      from,
-    };
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * All protocol messages use the format: unichess:<gameId>:<action>[:<params>...]
+ *
+ * Challenge: unichess:<gameId>:ch:<color>:<timeMinutes>:<elo>
+ * Accept:    unichess:<gameId>:ok
+ * Decline:   unichess:<gameId>:no
+ * Move:      unichess:<gameId>:mv:<san>:<clockMs>:<turn>
+ * Resign:    unichess:<gameId>:rs
+ * DrawOffer: unichess:<gameId>:do
+ * etc.
+ */
 export function parseMessage(raw: string): ParsedMessage | null {
   const trimmed = raw.trim();
 
-  // Challenge URLs
-  const challenge = parseChallengeUrl(trimmed);
-  if (challenge) return challenge;
-
-  // Standard protocol messages: unichess:<gameId>:<action>[:<params>...]
   if (!trimmed.startsWith(`${PROTOCOL_PREFIX}:`)) return null;
   const parts = trimmed.split(':');
   if (parts.length < 3) return null;
@@ -198,6 +157,24 @@ export function parseMessage(raw: string): ParsedMessage | null {
   const act = parts[2];
 
   switch (act) {
+    case ACTION.CHALLENGE: {
+      if (parts.length < 6) return null;
+      const color = parts[3];
+      if (!color || !VALID_CHALLENGE_COLORS.has(color)) return null;
+      const timeMinutes = parseInt(parts[4]!, 10);
+      if (isNaN(timeMinutes) || timeMinutes <= 0) return null;
+      const eloStr = parts[5];
+      const elo = eloStr ? parseInt(eloStr, 10) : DEFAULT_ELO;
+      const clampedElo = isNaN(elo) ? DEFAULT_ELO : Math.max(200, Math.min(3000, elo));
+      return {
+        action: ACTION.CHALLENGE,
+        gameId,
+        color: color as ChallengeColor,
+        timeMinutes,
+        elo: clampedElo,
+      };
+    }
+
     case ACTION.ACCEPT:
       return { action: ACTION.ACCEPT, gameId };
 
@@ -277,7 +254,7 @@ export function encodeMessage(msg: ParsedMessage): string {
 
   switch (msg.action) {
     case ACTION.CHALLENGE:
-      return msg.gameUrl;
+      return `${prefix}:${ACTION.CHALLENGE}:${msg.color}:${msg.timeMinutes}:${msg.elo}`;
     case ACTION.ACCEPT:
       return `${prefix}:${ACTION.ACCEPT}`;
     case ACTION.DECLINE:

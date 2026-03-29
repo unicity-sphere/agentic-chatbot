@@ -64,18 +64,11 @@ export class ChessBot {
     sphere.communications.onDirectMessage(async (message: { content: string; senderPubkey: string; senderNametag?: string }) => {
       if (message.senderPubkey === identity?.chainPubkey) return;
 
+      // Only respond to unichess: protocol messages, ignore everything else
+      if (!message.content.trim().startsWith('unichess:')) return;
+
       const parsed = parseMessage(message.content);
-      if (!parsed) {
-        const label = message.senderNametag || message.senderPubkey.slice(0, 12) + '...';
-        console.log(`${this.tag} Text DM from ${label}: ${message.content.slice(0, 80)}`);
-        try {
-          await sphere.communications.sendDM(
-            message.senderPubkey,
-            "I'm a chess bot. Challenge me to a game from the chess app!",
-          );
-        } catch {}
-        return;
-      }
+      if (!parsed) return;
 
       try {
         if (parsed.action === ACTION.CHALLENGE) {
