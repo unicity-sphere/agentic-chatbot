@@ -1,0 +1,192 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Game } from '../src/game.js';
+import { parseMessage, ACTION } from '../src/protocol.js';
+
+describe('Game', () => {
+  it('bot plays white — makes first move and sends it', async () => {
+    const sent: string[] = [];
+    let ended = false;
+
+    const game = new Game({
+      gameId: 'test0001',
+      myColor: 'w',
+      timeControlMs: 300_000,
+      elo: 1500,
+      sendMessage: async (msg) => { sent.push(msg); },
+      onGameEnd: () => { ended = true; },
+    });
+
+    await game.start();
+
+    // Bot should have sent a move message
+    assert.ok(sent.length >= 1, 'Bot should send at least one message');
+    const moveMsg = parseMessage(sent[sent.length - 1]);
+    assert.ok(moveMsg);
+    assert.equal(moveMsg.action, ACTION.MOVE);
+    if (moveMsg.action === ACTION.MOVE) {
+      assert.equal(moveMsg.turn, 'b'); // After white moves, it's black's turn
+      assert.ok(moveMsg.clockMs > 0);
+      assert.ok(moveMsg.san.length >= 2);
+    }
+
+    game.cleanup();
+  });
+
+  it('bot plays black — waits for opponent move then responds', async () => {
+    const sent: string[] = [];
+
+    const game = new Game({
+      gameId: 'test0002',
+      myColor: 'b',
+      timeControlMs: 300_000,
+      elo: 1500,
+      sendMessage: async (msg) => { sent.push(msg); },
+      onGameEnd: () => {},
+    });
+
+    await game.start();
+
+    // Bot is black, should not have sent a move yet (only heartbeats possible)
+    const moves = sent.filter((m) => m.includes(':mv:'));
+    assert.equal(moves.length, 0, 'Bot should not move before opponent');
+
+    // Simulate opponent's first move: e4
+    await game.handleMessage({
+      action: ACTION.MOVE,
+      gameId: 'test0002',
+      san: 'e4',
+      clockMs: 298000,
+      turn: 'b',
+    });
+
+    // Now bot should have responded with a move
+    const botMoves = sent.filter((m) => m.includes(':mv:'));
+    assert.ok(botMoves.length >= 1, 'Bot should respond with a move');
+    const parsed = parseMessage(botMoves[0]);
+    assert.ok(parsed && parsed.action === ACTION.MOVE);
+    if (parsed.action === ACTION.MOVE) {
+      assert.equal(parsed.turn, 'w'); // After black moves, it's white's turn
+    }
+
+    game.cleanup();
+  });
+
+  it('bot declines draw offers', async () => {
+    const sent: string[] = [];
+
+    const game = new Game({
+      gameId: 'test0003',
+      myColor: 'b',
+      timeControlMs: 300_000,
+      elo: 1500,
+      sendMessage: async (msg) => { sent.push(msg); },
+      onGameEnd: () => {},
+    });
+
+    await game.start();
+
+    await game.handleMessage({
+      action: ACTION.DRAW_OFFER,
+      gameId: 'test0003',
+    });
+
+    const decline = sent.find((m) => m.includes(':dd'));
+    assert.ok(decline, 'Bot should decline draw');
+
+    game.cleanup();
+  });
+
+  it('handles opponent resign', async () => {
+    const sent: string[] = [];
+    let endedGameId = '';
+
+    const game = new Game({
+      gameId: 'test0004',
+      myColor: 'b',
+      timeControlMs: 300_000,
+      elo: 1500,
+      sendMessage: async (msg) => { sent.push(msg); },
+      onGameEnd: (info) => { endedGameId = info.gameId; },
+    });
+
+    await game.start();
+
+    await game.handleMessage({
+      action: ACTION.RESIGN,
+      gameId: 'test0004',
+    });
+
+    // Should send game over with bot as winner
+    const goMsg = sent.find((m) => m.includes(':go:'));
+    assert.ok(goMsg, 'Should send game over');
+    const parsed = parseMessage(goMsg!);
+    assert.ok(parsed && parsed.action === ACTION.GAMEOVER);
+    if (parsed.action === ACTION.GAMEOVER) {
+      assert.equal(parsed.result, 'b'); // Bot is black, wins
+      assert.equal(parsed.reason, 'resign');
+    }
+
+    assert.equal(endedGameId, 'test0004');
+  });
+
+  it('handles abort before 2 moves', async () => {
+    let endedGameId = '';
+
+    const game = new Game({
+      gameId: 'test0005',
+      myColor: 'b',
+      timeControlMs: 300_000,
+      elo: 1500,
+      sendMessage: async () => {},
+      onGameEnd: (info) => { endedGameId = info.gameId; },
+    });
+
+    await game.start();
+
+    await game.handleMessage({
+      action: ACTION.ABORT,
+      gameId: 'test0005',
+    });
+
+    assert.equal(endedGameId, 'test0005');
+  });
+
+  it('plays a full short game (bot vs simulated opponent)', async () => {
+    // Scholar's mate: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6 4.Qxf7#
+    const opponentMoves = ['e5', 'Nc6', 'Nf6'];
+    let moveIndex = 0;
+    const sent: string[] = [];
+    let endedGameId = '';
+
+    const game = new Game({
+      gameId: 'test0006',
+      myColor: 'w',
+      timeControlMs: 300_000,
+      elo: 2100,
+      sendMessage: async (msg) => { sent.push(msg); },
+      onGameEnd: (info) => { endedGameId = info.gameId; },
+    });
+
+    await game.start();
+
+    // Play through opponent responses until game ends or moves exhausted
+    while (moveIndex < opponentMoves.length && !endedGameId) {
+      const opMove = opponentMoves[moveIndex++];
+      await game.handleMessage({
+        action: ACTION.MOVE,
+        gameId: 'test0006',
+        san: opMove,
+        clockMs: 290000,
+        turn: 'w',
+      });
+    }
+
+    // Game might not end with Scholar's mate since Stockfish picks its own moves.
+    // But it should have played several moves without crashing.
+    const botMoves = sent.filter((m) => m.includes(':mv:'));
+    assert.ok(botMoves.length >= 1, 'Bot should have made moves');
+
+    game.cleanup();
+  });
+});

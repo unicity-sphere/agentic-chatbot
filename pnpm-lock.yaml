@@ -12,6 +12,34 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
+  packages/chess-bot:
+    dependencies:
+      '@unicitylabs/sphere-sdk':
+        specifier: ^0.5.8
+        version: 0.5.8(ws@8.19.0)
+      chess.js:
+        specifier: ^1.0.0
+        version: 1.4.0
+      stockfish:
+        specifier: ^18.0.0
+        version: 18.0.5
+      ws:
+        specifier: ^8.19.0
+        version: 8.19.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.13
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.20.6
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/kbbot:
     dependencies:
       '@agentic/sphere-bot':
@@ -452,6 +480,9 @@ packages:
     resolution: {integrity: sha512-6/viltD51JklRhq4L7jC3zgy6gryuG5xfZ3kzpE+PravtyeQLeQmCYLREhQH7pWENg5pY4Yu/XCd6a7dKScVlw==}
     hasBin: true
 
+  chess.js@1.4.0:
+    resolution: {integrity: sha512-BBJgrrtKQOzFLonR0l+k64A98NLemPwNsCskwb+29bRwobUa4iTm51E1kwGPbWXAcfdDa18nad6vpPPKPWarqw==}
+
   content-disposition@1.0.1:
     resolution: {integrity: sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==}
     engines: {node: '>=18'}
@@ -820,6 +851,10 @@ packages:
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
+
+  stockfish@18.0.5:
+    resolution: {integrity: sha512-2A8mrlrYT8ovf4y8GIrmzOQZCC2kf01hPeM4xrVZdBeFC/LoZj+MgYLyrwdKXDQWubx1RCiKU9dFDGeDutuT3A==}
+    hasBin: true
 
   supports-color@10.2.2:
     resolution: {integrity: sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g==}
@@ -1267,6 +1302,8 @@ snapshots:
   cborg@4.5.8:
     optional: true
 
+  chess.js@1.4.0: {}
+
   content-disposition@1.0.1: {}
 
   content-type@1.0.5: {}
@@ -1693,6 +1730,8 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   statuses@2.0.2: {}
+
+  stockfish@18.0.5: {}
 
   supports-color@10.2.2:
     optional: true
