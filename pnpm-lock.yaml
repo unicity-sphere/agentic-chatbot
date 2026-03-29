@@ -15,8 +15,8 @@ importers:
   packages/chess-bot:
     dependencies:
       '@unicitylabs/sphere-sdk':
-        specifier: 0.6.11
-        version: 0.6.11(ws@8.19.0)
+        specifier: 0.6.12
+        version: 0.6.12(ws@8.19.0)
       chess.js:
         specifier: ^1.0.0
         version: 1.4.0
@@ -421,8 +421,8 @@ packages:
       ws:
         optional: true
 
-  '@unicitylabs/sphere-sdk@0.6.11':
-    resolution: {integrity: sha512-HlXSmyv9ljqmT9z8r+IV7yrdTcGlcP0iO1vkqoGu8WybatsxkrMaMBHIvaHinU0i8lAr64JBcJPZ3ADM8gEi4A==}
+  '@unicitylabs/sphere-sdk@0.6.12':
+    resolution: {integrity: sha512-325E+yM2bzeWE12ICuNHpfaWwDaEohvmX3rJbfQf71A5yAOn2Y9T/jjzEPwrHam3nfh5ij57S6ho9EVJlpdwPQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       ws: '>=8.0.0'
@@ -1247,7 +1247,7 @@ snapshots:
       multiformats: 13.4.2
       ws: 8.19.0
 
-  '@unicitylabs/sphere-sdk@0.6.11(ws@8.19.0)':
+  '@unicitylabs/sphere-sdk@0.6.12(ws@8.19.0)':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1

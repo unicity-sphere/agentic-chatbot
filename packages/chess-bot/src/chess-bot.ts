@@ -35,11 +35,9 @@ export class ChessBot {
       tokensDir: this.config.tokensDir,
     });
 
-    // Disable L1 (ALPHA blockchain) — not needed for chess, avoids Fulcrum TLS issues
-    delete (providers as unknown as Record<string, unknown>).l1;
-
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,
+      l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
       groupChat: !!this.config.groupId,
