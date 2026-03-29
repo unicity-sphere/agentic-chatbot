@@ -191,22 +191,31 @@ export class ChessBot {
     }
   }
 
+  private getUctBalance(): number {
+    if (!this.sphere) return 0;
+    try {
+      const tokens = this.sphere.payments.getTokens();
+      const decimals = this.config.uctDecimals;
+      let total = 0n;
+      for (const t of tokens as Array<{ coinId?: string; symbol?: string; amount?: string | bigint }>) {
+        if (t.symbol === 'UCT' || t.coinId === this.config.uctCoinId) {
+          total += BigInt(t.amount ?? 0);
+        }
+      }
+      return Number(total / 10n ** BigInt(decimals));
+    } catch {
+      return 0;
+    }
+  }
+
   private async ensureBalance(): Promise<void> {
     if (!this.sphere) return;
 
-    try {
-      const tokens = this.sphere.payments.getTokens();
-      const uctCount = tokens.filter(
-        (t: { coinId?: string; symbol?: string }) =>
-          t.symbol === 'UCT' || t.coinId === this.config.uctCoinId,
-      ).length;
-
-      // If we have fewer than 2 UCT tokens, top up from faucet
-      if (uctCount < 2) {
-        console.log(`${this.tag} Low UCT balance (${uctCount} tokens), requesting from faucet...`);
-        await this.requestFaucet();
-      }
-    } catch {}
+    const balance = this.getUctBalance();
+    if (balance < ENTRY_FEE) {
+      console.log(`${this.tag} Low UCT balance (${balance} UCT), requesting from faucet...`);
+      await this.requestFaucet();
+    }
   }
 
   private async requestFaucet(): Promise<void> {
@@ -317,21 +326,8 @@ export class ChessBot {
   }
 
   private logBalance(): void {
-    if (!this.sphere) return;
-    try {
-      const tokens = this.sphere.payments.getTokens();
-      const byCoin = new Map<string, number>();
-      for (const t of tokens as Array<{ symbol?: string; coinId?: string }>) {
-        const key = t.symbol || t.coinId || 'unknown';
-        byCoin.set(key, (byCoin.get(key) || 0) + 1);
-      }
-      const summary = Array.from(byCoin.entries())
-        .map(([k, v]) => `${v} ${k}`)
-        .join(', ');
-      console.log(`${this.tag} Tokens: ${tokens.length} (${summary || 'none'})`);
-    } catch {
-      console.log(`${this.tag} Could not read token balance`);
-    }
+    const balance = this.getUctBalance();
+    console.log(`${this.tag} UCT balance: ${balance}`);
   }
 
   async destroy(): Promise<void> {
