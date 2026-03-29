@@ -103,6 +103,25 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  chess-bot:
+    build:
+      context: .
+      dockerfile: packages/chess-bot/Dockerfile
+    networks:
+      - internal
+    environment:
+      NETWORK: ${CHESS_BOT_NETWORK:-testnet}
+      BOT_NAMETAG: ${CHESS_BOT_NAMETAG:-chess-bot}
+      UCT_COIN_ID: ${UCT_COIN_ID:-}
+      UCT_DECIMALS: ${UCT_DECIMALS:-8}
+      MAX_CONCURRENT_GAMES: ${MAX_CONCURRENT_GAMES:-10}
+      DATA_DIR: /app/data
+      TOKENS_DIR: /app/tokens
+    volumes:
+      - ./data/chess-bot/data:/app/data
+      - ./data/chess-bot/tokens:/app/tokens
+    restart: unless-stopped
+
   unicity-l3:
     build:
       context: .
