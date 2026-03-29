@@ -51,8 +51,20 @@ export class SphereBot {
       console.log(`${this.prefix} Loaded existing wallet`);
     }
 
+    // Re-register nametag if missing (e.g. wallet created with older SDK)
+    if (!sphere.identity?.nametag && this.config.nametag) {
+      console.log(`${this.prefix} Nametag not resolved, attempting to register @${this.config.nametag}...`);
+      try {
+        await sphere.registerNametag(this.config.nametag);
+        console.log(`${this.prefix} Nametag registered successfully`);
+      } catch (err: any) {
+        // ALREADY_INITIALIZED means wallet has a nametag but recovery didn't find it
+        console.log(`${this.prefix} registerNametag: ${err?.message ?? err}`);
+      }
+    }
+
     const identity = sphere.identity!;
-    console.log(`${this.prefix} Nametag: @${identity.nametag}`);
+    console.log(`${this.prefix} Nametag: @${identity.nametag ?? this.config.nametag}`);
     console.log(`${this.prefix} Direct address: ${identity.directAddress}`);
     console.log(`${this.prefix} Chain pubkey: ${identity.chainPubkey}`);
 
