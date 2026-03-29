@@ -41,6 +41,8 @@ export class ChessBot {
       autoGenerate: true,
       nametag: this.config.nametag,
       groupChat: !!this.config.groupId,
+      // Force DM lookback to 24h ago to avoid stale future timestamps from NIP-17 randomization
+      dmSince: Math.floor(Date.now() / 1000) - 86400,
     });
 
     this.sphere = sphere;
