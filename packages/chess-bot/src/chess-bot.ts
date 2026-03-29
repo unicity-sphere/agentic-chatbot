@@ -218,7 +218,7 @@ export class ChessBot {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          unicityId: `@${nametag}`,
+          unicityId: nametag,
           coin: 'unicity',
           amount: this.config.faucetTopUpAmount,
         }),
