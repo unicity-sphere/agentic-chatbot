@@ -323,13 +323,6 @@ export class Game {
         return;
       }
 
-      const estimatedOpponentClock = this.opponentClockMs - silenceMs;
-      if (estimatedOpponentClock <= 0 && this.moveCount > 0) {
-        this.log(`OPPONENT TIMEOUT — estimated clock: ${Math.round(estimatedOpponentClock)}ms, silence: ${silenceSec}s`);
-        this.endGame(this.myColor as GameOverResult, 'timeout').catch(() => {});
-        return;
-      }
-
       if (this.lastMoveSent) {
         const msg = this.buildMoveMsg();
         this.log(`POLL #${this.pollCount} resend: ${msg} (silence: ${silenceSec}s)`);
