@@ -65,9 +65,9 @@ export class StockfishEngine extends EventEmitter {
     this.send('setoption name UCI_LimitStrength value true');
     this.send(`setoption name UCI_Elo value ${Math.max(1320, Math.min(3190, elo))}`);
     if (elo < 1320) {
-      // Skill Level: 200→0, 800→5, 1000→7, 1320→10
+      // Skill Level: 200→0, 800→3, 1000→5, 1320→8
       // Intentionally low — Skill Level 0 is already ~800+ ELO
-      const skillLevel = Math.max(0, Math.min(10, Math.round(((elo - 200) / 1120) * 10)));
+      const skillLevel = Math.max(0, Math.min(8, Math.round(((elo - 200) / 1120) * 8)));
       this.send(`setoption name Skill Level value ${skillLevel}`);
     }
 
@@ -83,8 +83,8 @@ export class StockfishEngine extends EventEmitter {
 
     let goCmd = `go movetime ${Math.max(100, thinkTimeMs)}`;
     if (this.elo < 1320) {
-      // Depth: 200→1, 500→2, 800→3, 1000→4, 1320→5
-      const maxDepth = Math.max(1, Math.min(5, Math.ceil(((this.elo - 200) / 1120) * 5)));
+      // Depth: 200→1, 500→1, 800→2, 1000→3, 1320→4
+      const maxDepth = Math.max(1, Math.min(4, Math.ceil(((this.elo - 200) / 1120) * 4)));
       goCmd += ` depth ${maxDepth}`;
     }
 
