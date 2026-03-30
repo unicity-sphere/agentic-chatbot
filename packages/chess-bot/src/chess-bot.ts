@@ -5,8 +5,6 @@ import {
   parseMessage,
   encodeMessage,
   ACTION,
-  ESCROW_NAMETAG,
-  ENTRY_FEE,
   type ChallengeMessage,
 } from './protocol.js';
 import { Game, type GameEndInfo } from './game.js';
@@ -20,6 +18,7 @@ if (typeof globalThis.WebSocket === 'undefined') {
 export class ChessBot {
   private sphere: Sphere | null = null;
   private games = new Map<string, Game>();
+  private handledGameIds = new Set<string>();
   private tag: string;
 
   constructor(private config: ChessBotConfig) {
@@ -59,8 +58,6 @@ export class ChessBot {
     const identity = sphere.identity;
     console.log(`${this.tag} Nametag: @${identity?.nametag}`);
     console.log(`${this.tag} Max concurrent games: ${this.config.maxConcurrentGames}`);
-
-    this.logBalance();
 
     // Listen for incoming DMs
     sphere.communications.onDirectMessage(async (message: { content: string; senderPubkey: string; senderNametag?: string }) => {
@@ -123,10 +120,11 @@ export class ChessBot {
       `${this.tag} Challenge from ${label}: game=${challenge.gameId} color=${challenge.color} time=${challenge.timeMinutes}min elo=${challenge.elo}`,
     );
 
-    if (this.games.has(challenge.gameId)) {
-      console.log(`${this.tag} Game ${challenge.gameId} already exists, ignoring`);
+    if (this.handledGameIds.has(challenge.gameId)) {
+      console.log(`${this.tag} Game ${challenge.gameId} already handled, ignoring duplicate challenge`);
       return;
     }
+    this.handledGameIds.add(challenge.gameId);
 
     if (this.games.size >= this.config.maxConcurrentGames) {
       console.log(`${this.tag} Too many active games (${this.games.size}), declining`);
@@ -145,17 +143,6 @@ export class ChessBot {
       myColor = 'w';
     } else {
       myColor = Math.random() < 0.5 ? 'w' : 'b';
-    }
-
-    // Deposit entry fee to escrow
-    const deposited = await this.deposit(challenge.gameId);
-    if (!deposited) {
-      console.error(`${this.tag} Deposit failed for game ${challenge.gameId}, declining`);
-      await this.sendDM(
-        senderPubkey,
-        encodeMessage({ action: ACTION.DECLINE, gameId: challenge.gameId }),
-      );
-      return;
     }
 
     // Accept the challenge — send ok multiple times for reliability
@@ -195,100 +182,6 @@ export class ChessBot {
     }
   }
 
-  private getUctBalance(): number {
-    if (!this.sphere) return 0;
-    try {
-      const tokens = this.sphere.payments.getTokens();
-      const decimals = this.config.uctDecimals;
-      let total = 0n;
-      for (const t of tokens as Array<{ coinId?: string; symbol?: string; amount?: string | bigint }>) {
-        if (t.symbol === 'UCT' || t.coinId === this.config.uctCoinId) {
-          total += BigInt(t.amount ?? 0);
-        }
-      }
-      return Number(total / 10n ** BigInt(decimals));
-    } catch {
-      return 0;
-    }
-  }
-
-  private async ensureBalance(): Promise<void> {
-    if (!this.sphere) return;
-
-    const balance = this.getUctBalance();
-    if (balance < ENTRY_FEE) {
-      console.log(`${this.tag} Low UCT balance (${balance} UCT), requesting from faucet...`);
-      await this.requestFaucet();
-    }
-  }
-
-  private async requestFaucet(): Promise<void> {
-    const nametag = this.sphere?.identity?.nametag;
-    if (!nametag) return;
-
-    try {
-      const res = await fetch(this.config.faucetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          unicityId: nametag,
-          coin: 'unicity',
-          amount: this.config.faucetTopUpAmount,
-        }),
-      });
-
-      if (res.ok) {
-        console.log(`${this.tag} Faucet top-up: requested ${this.config.faucetTopUpAmount} UCT`);
-        // Wait a moment for tokens to arrive
-        await new Promise((r) => setTimeout(r, 3000));
-      } else {
-        const body = await res.text().catch(() => '');
-        console.error(`${this.tag} Faucet request failed (${res.status}): ${body}`);
-      }
-    } catch (err) {
-      console.error(`${this.tag} Faucet error:`, err);
-    }
-  }
-
-  private async deposit(gameId: string): Promise<boolean> {
-    if (!this.sphere) return false;
-
-    // Top up from faucet if balance is low
-    await this.ensureBalance();
-
-    // Resolve UCT coin info from bot's tokens
-    let coinId = this.config.uctCoinId;
-    let decimals = this.config.uctDecimals;
-
-    try {
-      const tokens = this.sphere.payments.getTokens();
-      const uct = tokens.find(
-        (t: { coinId?: string; symbol?: string; decimals?: number }) =>
-          t.symbol === 'UCT' || t.coinId === this.config.uctCoinId,
-      );
-      if (uct) {
-        coinId = uct.coinId ?? coinId;
-        decimals = uct.decimals ?? decimals;
-      }
-    } catch {}
-
-    // Use BigInt to avoid floating-point overflow at 18 decimals
-    const amount = (BigInt(ENTRY_FEE) * 10n ** BigInt(decimals)).toString();
-
-    try {
-      const result = await this.sphere.payments.send({
-        coinId,
-        amount,
-        recipient: ESCROW_NAMETAG,
-        memo: `unichess:${gameId}`,
-      });
-      console.log(`${this.tag} Deposit ${ENTRY_FEE} UCT for game ${gameId}: ${result.status}`);
-      return result.status !== 'failed';
-    } catch (err) {
-      console.error(`${this.tag} Deposit error:`, err);
-      return false;
-    }
-  }
 
   private async postGameResult(info: GameEndInfo, opponentLabel: string, elo: number, botColor: 'w' | 'b'): Promise<void> {
     if (!this.config.groupId || !this.sphere || !info.result) return;
@@ -339,11 +232,6 @@ export class ChessBot {
       }
     }
     console.error(`${this.tag} DM GAVE UP after 3 attempts: ${short}`);
-  }
-
-  private logBalance(): void {
-    const balance = this.getUctBalance();
-    console.log(`${this.tag} UCT balance: ${balance}`);
   }
 
   async destroy(): Promise<void> {
