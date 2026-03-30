@@ -326,7 +326,15 @@ export class ChessBot {
 
   private async sendDM(pubkey: string, message: string): Promise<void> {
     if (!this.sphere) throw new Error('Bot not started');
-    await this.sphere.communications.sendDM(pubkey, message);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.sphere.communications.sendDM(pubkey, message);
+        return;
+      } catch (err) {
+        console.error(`${this.tag} sendDM attempt ${attempt + 1} failed:`, err);
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
   }
 
   private logBalance(): void {

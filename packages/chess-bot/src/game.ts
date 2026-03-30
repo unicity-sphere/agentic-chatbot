@@ -3,11 +3,12 @@ import { StockfishEngine } from './stockfish.js';
 import {
   encodeMessage,
   ACTION,
-  HEARTBEAT_INTERVAL_MS,
   type ParsedMessage,
   type GameOverResult,
   type GameOverReason,
 } from './protocol.js';
+
+const POLL_INTERVAL_MS = 10_000;
 
 export interface GameEndInfo {
   gameId: string;
@@ -309,11 +310,13 @@ export class Game {
 
       // Resend last move with fresh clock as keep-alive + retry
       if (this.lastMoveSent) {
+        const msg = this.buildMoveMsg();
+        console.log(`${this.tag} Resending: ${msg.slice(0, 60)}`);
         try {
-          await this.sendMessage(this.buildMoveMsg());
+          await this.sendMessage(msg);
         } catch {}
       }
-    }, HEARTBEAT_INTERVAL_MS);
+    }, POLL_INTERVAL_MS);
   }
 
   private stopPolling(): void {
