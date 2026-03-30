@@ -55,9 +55,10 @@ export class SphereBot {
       console.log(`${this.prefix} Loaded existing wallet`);
     }
 
-    // Re-register nametag if missing (e.g. wallet created with older SDK)
-    if (!sphere.identity?.nametag && this.config.nametag) {
-      console.log(`${this.prefix} Nametag not resolved, attempting to register @${this.config.nametag}...`);
+    // Always try to register nametag — ensures address_nametags binding exists in storage
+    // (wallets created with older SDK versions may be missing this)
+    if (this.config.nametag) {
+      console.log(`${this.prefix} Ensuring nametag @${this.config.nametag} is registered...`);
       try {
         await sphere.registerNametag(this.config.nametag);
         console.log(`${this.prefix} Nametag registered successfully`);
