@@ -39,6 +39,7 @@ export class Game {
   private moveCount = 0;
   private lastAppliedOpponentMoveNum = 0;
   private pollInterval?: ReturnType<typeof setInterval>;
+  private pollCount = 0;
   private lastMoveSent: { san: string; color: 'w' | 'b'; moveNum: number } | null = null;
   private ended = false;
   private lastOpponentActivity = 0;
@@ -63,7 +64,7 @@ export class Game {
 
     this.engine.on('exit', () => {
       if (!this.ended) {
-        console.error(`${this.tag} Stockfish crashed, resigning`);
+        this.log('ENGINE CRASHED — resigning');
         this.sendMessage(
           encodeMessage({ action: ACTION.RESIGN, gameId: this.gameId }),
         ).catch(() => {});
@@ -72,32 +73,43 @@ export class Game {
     });
   }
 
+  private log(msg: string): void {
+    console.log(`${this.tag} ${msg}`);
+  }
+
   async start(): Promise<void> {
-    console.log(
-      `${this.tag} Starting (color=${this.myColor}, elo=${this.elo}, time=${this.myClockMs}ms)`,
-    );
+    this.log(`START color=${this.myColor} elo=${this.elo} time=${this.timeControlMs}ms`);
     await this.engine.init(this.elo);
+    this.log('Stockfish ready');
 
     if (this.myColor === 'w') {
-      // Small delay so opponent has time to process the accept message
+      this.log('Playing white — making first move after 1.5s delay');
       await sleep(1500);
       this.turnStartedAt = Date.now();
       await this.makeMove();
     } else {
+      this.log('Playing black — waiting for opponent first move');
       this.startPolling();
     }
   }
 
   async handleMessage(msg: ParsedMessage): Promise<void> {
-    if (this.ended) return;
+    if (this.ended) {
+      this.log(`IGNORED ${msg.action} (game ended)`);
+      return;
+    }
 
     switch (msg.action) {
       case ACTION.MOVE: {
+        if (msg.color === this.myColor) {
+          this.log(`IGNORED mv — color ${msg.color} is ours (echo?)`);
+          return;
+        }
+        if (msg.moveNum > 0 && msg.moveNum <= this.lastAppliedOpponentMoveNum) {
+          this.log(`IGNORED mv ${msg.san} #${msg.moveNum} — already applied (have #${this.lastAppliedOpponentMoveNum})`);
+          return;
+        }
         this.lastOpponentActivity = Date.now();
-        // Reject moves claiming to be from our color
-        if (msg.color === this.myColor) return;
-        // Dedup by moveNum
-        if (msg.moveNum > 0 && msg.moveNum <= this.lastAppliedOpponentMoveNum) return;
         await this.handleOpponentMove(msg.san, msg.clockMs, msg.moveNum);
         break;
       }
@@ -106,46 +118,50 @@ export class Game {
         this.opponentClockMs = msg.clockMs;
         break;
       case ACTION.RESIGN:
-        console.log(`${this.tag} Opponent resigned`);
+        this.log('RECV resign');
         await this.endGame(this.myColor, 'resign');
         break;
       case ACTION.DRAW_OFFER:
-        await this.sendMessage(
+        this.log('RECV draw offer — declining');
+        this.sendMessage(
           encodeMessage({ action: ACTION.DRAW_DECLINE, gameId: this.gameId }),
-        );
+        ).catch(() => {});
         break;
       case ACTION.ABORT:
         if (this.moveCount < 2) {
-          console.log(`${this.tag} Game aborted by opponent`);
+          this.log('RECV abort');
           this.cleanup();
         }
         break;
       case ACTION.GAMEOVER:
-        console.log(`${this.tag} Opponent sent game over: ${msg.result} by ${msg.reason}`);
+        this.log(`RECV gameover ${msg.result} by ${msg.reason}`);
         this.cleanup();
         break;
       default:
+        this.log(`IGNORED unknown action: ${msg.action}`);
         break;
     }
   }
 
   private async handleOpponentMove(san: string, clockMs: number, moveNum: number): Promise<void> {
     this.stopPolling();
+    this.lastMoveSent = null;
     this.opponentClockMs = clockMs;
 
     try {
       this.chess.move(san);
     } catch {
-      console.error(`${this.tag} Invalid opponent move: ${san}`);
+      this.log(`INVALID opponent move: ${san} — ignoring`);
       return;
     }
 
     this.moveCount++;
     this.lastAppliedOpponentMoveNum = moveNum;
-    console.log(`${this.tag} Opponent: ${san} #${moveNum} (clock: ${clockMs}ms)`);
+    this.log(`RECV mv ${san} #${moveNum} (opponent clock: ${clockMs}ms) — total moves: ${this.moveCount}`);
 
     if (this.checkTerminal()) return;
 
+    this.log('Thinking...');
     this.turnStartedAt = Date.now();
     await this.makeMove();
   }
@@ -155,13 +171,14 @@ export class Game {
     if (!this.turnStartedAt) this.turnStartedAt = Date.now();
 
     const thinkTime = this.calculateThinkTime();
+    this.log(`Stockfish go movetime=${thinkTime}ms (my clock: ${Math.round(this.myClockMs)}ms)`);
 
     let uciMove: string;
     try {
       uciMove = await this.engine.getBestMove(this.chess.fen(), thinkTime);
     } catch (err) {
-      console.error(`${this.tag} Stockfish error:`, err);
-      await this.sendMessage(
+      this.log(`STOCKFISH ERROR: ${err} — resigning`);
+      this.sendMessage(
         encodeMessage({ action: ACTION.RESIGN, gameId: this.gameId }),
       ).catch(() => {});
       this.cleanup();
@@ -179,8 +196,8 @@ export class Game {
       const move = this.chess.move({ from, to, promotion });
       san = move.san;
     } catch {
-      console.error(`${this.tag} Cannot apply Stockfish move ${uciMove} to position`);
-      await this.sendMessage(
+      this.log(`CANNOT APPLY Stockfish move ${uciMove} — resigning`);
+      this.sendMessage(
         encodeMessage({ action: ACTION.RESIGN, gameId: this.gameId }),
       ).catch(() => {});
       this.cleanup();
@@ -194,18 +211,20 @@ export class Game {
 
     if (this.myClockMs <= 0) {
       this.myClockMs = 0;
+      this.log('BOT TIMED OUT');
       const winner = this.myColor === 'w' ? 'b' : 'w';
       await this.endGame(winner as GameOverResult, 'timeout');
       return;
     }
 
     this.lastMoveSent = { san, color: this.myColor, moveNum: this.moveCount };
-    await this.sendMessage(this.buildMoveMsg());
-    console.log(`${this.tag} Bot: ${san} #${this.moveCount} (clock: ${Math.round(this.myClockMs)}ms)`);
+    const moveMsg = this.buildMoveMsg();
+    this.log(`SEND mv ${san} #${this.moveCount} (my clock: ${Math.round(this.myClockMs)}ms, thought: ${elapsed}ms)`);
+    this.sendMessage(moveMsg).catch((err) => this.log(`SEND FAILED: ${err}`));
 
     if (this.checkTerminal()) return;
 
-    // Poll: resend last move periodically until opponent responds
+    this.log('Waiting for opponent — starting poll');
     this.startPolling();
   }
 
@@ -213,22 +232,27 @@ export class Game {
     if (this.chess.isCheckmate()) {
       const loser = this.chess.turn();
       const winner = (loser === 'w' ? 'b' : 'w') as GameOverResult;
+      this.log(`CHECKMATE — ${winner} wins`);
       this.endGame(winner, 'checkmate');
       return true;
     }
     if (this.chess.isStalemate()) {
+      this.log('STALEMATE');
       this.endGame('d', 'stalemate');
       return true;
     }
     if (this.chess.isThreefoldRepetition()) {
+      this.log('THREEFOLD REPETITION');
       this.endGame('d', 'repetition');
       return true;
     }
     if (this.chess.isInsufficientMaterial()) {
+      this.log('INSUFFICIENT MATERIAL');
       this.endGame('d', 'material');
       return true;
     }
     if (this.chess.isDraw()) {
+      this.log('50-MOVE DRAW');
       this.endGame('d', '50move');
       return true;
     }
@@ -242,25 +266,20 @@ export class Game {
 
     const outcome =
       result === 'd'
-        ? 'draw'
+        ? 'DRAW'
         : result === this.myColor
-          ? 'bot wins'
-          : 'opponent wins';
-    console.log(`${this.tag} Game over: ${outcome} by ${reason}`);
+          ? 'BOT WINS'
+          : 'OPPONENT WINS';
+    this.log(`GAME OVER: ${outcome} by ${reason} | moves: ${this.moveCount} | pgn: ${this.chess.pgn()}`);
 
-    try {
-      await this.sendMessage(
-        encodeMessage({ action: ACTION.GAMEOVER, gameId: this.gameId, result, reason }),
-      );
-    } catch (err) {
-      console.error(`${this.tag} Failed to send game over:`, err);
-    }
+    this.sendMessage(
+      encodeMessage({ action: ACTION.GAMEOVER, gameId: this.gameId, result, reason }),
+    ).catch((err) => this.log(`Failed to send gameover: ${err}`));
 
     this.engine.destroy();
     this.onGameEnd({ gameId: this.gameId, result, reason, pgn: this.chess.pgn() });
   }
 
-  /** Build move message with current clock value (for accurate clock sync on resends) */
   private buildMoveMsg(): string {
     const m = this.lastMoveSent!;
     return encodeMessage({
@@ -281,55 +300,52 @@ export class Game {
     return Math.max(100, thinkTime);
   }
 
-  /**
-   * While waiting for the opponent, periodically resend the last move.
-   * This serves as both heartbeat and retry — the opponent deduplicates by moveNum.
-   * Also detects opponent disconnect/timeout.
-   */
   private startPolling(): void {
     this.stopPolling();
-    this.pollInterval = setInterval(async () => {
+    this.pollCount = 0;
+    this.log(`POLL START — will resend every ${POLL_INTERVAL_MS / 1000}s, lastMoveSent=${this.lastMoveSent ? this.lastMoveSent.san + ' #' + this.lastMoveSent.moveNum : 'null'}`);
+    this.pollInterval = setInterval(() => {
       if (this.ended) return;
+      this.pollCount++;
 
       const silenceMs = Date.now() - this.lastOpponentActivity;
+      const silenceSec = Math.round(silenceMs / 1000);
 
-      // Opponent disconnect: no activity for the full time control duration
       if (silenceMs >= this.timeControlMs) {
-        console.log(`${this.tag} Opponent disconnected (${Math.round(silenceMs / 1000)}s silence)`);
-        await this.endGame(this.myColor as GameOverResult, 'disconnect');
+        this.log(`OPPONENT DISCONNECTED — ${silenceSec}s silence > ${this.timeControlMs / 1000}s limit`);
+        this.endGame(this.myColor as GameOverResult, 'disconnect').catch(() => {});
         return;
       }
 
-      // Opponent timeout: their clock ran out
       const estimatedOpponentClock = this.opponentClockMs - silenceMs;
       if (estimatedOpponentClock <= 0 && this.moveCount > 0) {
-        console.log(`${this.tag} Opponent timed out`);
-        await this.endGame(this.myColor as GameOverResult, 'timeout');
+        this.log(`OPPONENT TIMEOUT — estimated clock: ${Math.round(estimatedOpponentClock)}ms, silence: ${silenceSec}s`);
+        this.endGame(this.myColor as GameOverResult, 'timeout').catch(() => {});
         return;
       }
 
-      // Resend last move with fresh clock as keep-alive + retry
       if (this.lastMoveSent) {
         const msg = this.buildMoveMsg();
-        console.log(`${this.tag} Resending: ${msg.slice(0, 60)}`);
-        try {
-          await this.sendMessage(msg);
-        } catch {}
+        this.log(`POLL #${this.pollCount} resend: ${msg} (silence: ${silenceSec}s)`);
+        this.sendMessage(msg).catch((err) => this.log(`POLL resend failed: ${err}`));
+      } else {
+        this.log(`POLL #${this.pollCount} — no lastMoveSent, nothing to resend (silence: ${silenceSec}s)`);
       }
     }, POLL_INTERVAL_MS);
   }
 
   private stopPolling(): void {
     if (this.pollInterval) {
+      this.log(`POLL STOP after ${this.pollCount} ticks`);
       clearInterval(this.pollInterval);
       this.pollInterval = undefined;
     }
-    this.lastMoveSent = null;
   }
 
   cleanup(): void {
     if (this.ended) return;
     this.ended = true;
+    this.log('CLEANUP');
     this.stopPolling();
     this.engine.destroy();
     this.onGameEnd({ gameId: this.gameId, result: null, reason: null, pgn: this.chess.pgn() });

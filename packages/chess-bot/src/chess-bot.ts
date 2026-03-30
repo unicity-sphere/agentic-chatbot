@@ -326,15 +326,19 @@ export class ChessBot {
 
   private async sendDM(pubkey: string, message: string): Promise<void> {
     if (!this.sphere) throw new Error('Bot not started');
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const short = message.length > 80 ? message.slice(0, 80) + '...' : message;
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
+        const start = Date.now();
         await this.sphere.communications.sendDM(pubkey, message);
+        console.log(`${this.tag} DM sent (${Date.now() - start}ms, attempt ${attempt}): ${short}`);
         return;
       } catch (err) {
-        console.error(`${this.tag} sendDM attempt ${attempt + 1} failed:`, err);
-        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+        console.error(`${this.tag} DM FAILED attempt ${attempt}/3: ${short} — ${err}`);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
       }
     }
+    console.error(`${this.tag} DM GAVE UP after 3 attempts: ${short}`);
   }
 
   private logBalance(): void {
