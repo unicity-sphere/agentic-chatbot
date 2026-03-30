@@ -1,6 +1,7 @@
 export interface L3Config {
   network: 'mainnet' | 'testnet' | 'dev';
   nametag: string;
+  mnemonic?: string;
   dataDir: string;
   tokensDir: string;
   aggregatorUrl: string;
@@ -14,6 +15,7 @@ export function loadConfig(): L3Config {
   return {
     network: (process.env.NETWORK || 'testnet') as L3Config['network'],
     nametag: process.env.BOT_NAMETAG || 'unicity-l3',
+    mnemonic: process.env.BOT_MNEMONIC || undefined,
     dataDir: process.env.DATA_DIR || '/app/data',
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     aggregatorUrl: process.env.AGGREGATOR_URL || 'https://goggregator-test.unicity.network/',

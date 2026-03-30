@@ -57,6 +57,7 @@ services:
     environment:
       NETWORK: ${KBBOT_NETWORK:-testnet}
       BOT_NAMETAG: ${KBBOT_NAMETAG:-kbbot}
+      BOT_MNEMONIC: ${KBBOT_MNEMONIC:-}
       KBBOT_LLM_API_KEY: ${KBBOT_LLM_API_KEY}
       KBBOT_LLM_MODEL: ${KBBOT_LLM_MODEL:-gemini-3-flash-preview}
       KBBOT_LLM_BASE_URL: ${KBBOT_LLM_BASE_URL:-}
@@ -86,6 +87,7 @@ services:
     environment:
       NETWORK: ${VIKTOR_NETWORK:-testnet}
       BOT_NAMETAG: ${VIKTOR_NAMETAG:-viktor}
+      BOT_MNEMONIC: ${VIKTOR_MNEMONIC:-}
       VIKTOR_LLM_API_KEY: ${VIKTOR_LLM_API_KEY:-}
       VIKTOR_LLM_MODEL: ${VIKTOR_LLM_MODEL:-gpt-oss}
       VIKTOR_LLM_BASE_URL: ${VIKTOR_LLM_BASE_URL:-}
@@ -112,6 +114,7 @@ services:
     environment:
       NETWORK: ${CHESS_BOT_NETWORK:-testnet}
       BOT_NAMETAG: ${CHESS_BOT_NAMETAG:-chess-bot}
+      BOT_MNEMONIC: ${CHESS_BOT_MNEMONIC:-}
       MAX_CONCURRENT_GAMES: ${MAX_CONCURRENT_GAMES:-10}
       GROUP_ID: ${CHESS_BOT_GROUP_ID:-chess}
       DATA_DIR: /app/data
@@ -130,6 +133,7 @@ services:
     environment:
       NETWORK: ${L3_NETWORK:-testnet}
       BOT_NAMETAG: ${L3_NAMETAG:-unicity-l3}
+      BOT_MNEMONIC: ${L3_MNEMONIC:-}
       AGGREGATOR_URL: ${L3_AGGREGATOR_URL:-https://goggregator-test.unicity.network/}
       EXPLORER_BASE_URL: ${L3_EXPLORER_BASE_URL:-https://unicitynetwork.github.io/smt-explorer/}
       GROUP_ID: ${L3_GROUP_ID}

@@ -67,6 +67,7 @@ export function loadConfig(): SphereBotConfig {
     dataDir: process.env.DATA_DIR || '/app/data',
     tokensDir: process.env.TOKENS_DIR || '/app/tokens',
     nametag: process.env.BOT_NAMETAG || 'viktor',
+    mnemonic: process.env.BOT_MNEMONIC || undefined,
     systemPrompt: SYSTEM_PROMPT,
     welcomeMessage: WELCOME_MESSAGE,
     welcomeTrigger: '__sphere_welcome__',

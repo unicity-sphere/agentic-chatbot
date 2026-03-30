@@ -9,6 +9,8 @@ export interface SphereBotConfig {
   tokensDir: string;
   /** Bot's Sphere @nametag */
   nametag: string;
+  /** BIP39 mnemonic for wallet recovery. If provided, used to restore the wallet identity. */
+  mnemonic?: string;
   /** LLM system prompt */
   systemPrompt: string;
   /** Welcome DM message. If undefined, no welcome DMs are sent. */

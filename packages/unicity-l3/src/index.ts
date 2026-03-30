@@ -46,6 +46,7 @@ async function initSphere() {
     ...providers,
     autoGenerate: true,
     nametag: config.nametag,
+    mnemonic: config.mnemonic,
     groupChat: true,
   });
 

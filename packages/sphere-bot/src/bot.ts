@@ -40,6 +40,7 @@ export class SphereBot {
       l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
+      mnemonic: this.config.mnemonic,
       dmSince: Math.floor(Date.now() / 1000) - 86400,
     });
     console.log(`${this.prefix} Sphere.init() complete (created=${created})`);

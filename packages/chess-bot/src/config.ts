@@ -1,6 +1,8 @@
 export interface ChessBotConfig {
   /** Bot's nametag on Sphere (e.g. "chess-bot") */
   nametag: string;
+  /** BIP39 mnemonic for wallet recovery */
+  mnemonic?: string;
   /** Network: mainnet, testnet, or dev */
   network: string;
   /** Directory for wallet persistence */
@@ -16,6 +18,7 @@ export interface ChessBotConfig {
 export function loadConfig(): ChessBotConfig {
   return {
     nametag: process.env.BOT_NAMETAG || 'chess-bot',
+    mnemonic: process.env.BOT_MNEMONIC || undefined,
     network: process.env.NETWORK || 'testnet',
     dataDir: process.env.DATA_DIR || './data/chess-bot/data',
     tokensDir: process.env.TOKENS_DIR || './data/chess-bot/tokens',

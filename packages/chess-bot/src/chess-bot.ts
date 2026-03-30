@@ -39,6 +39,7 @@ export class ChessBot {
       l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
+      mnemonic: this.config.mnemonic,
       groupChat: !!this.config.groupId,
       // Force DM lookback to 24h ago to avoid stale future timestamps from NIP-17 randomization
       dmSince: Math.floor(Date.now() / 1000) - 86400,
