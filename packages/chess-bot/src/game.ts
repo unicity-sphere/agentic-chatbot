@@ -276,6 +276,8 @@ export class Game {
       encodeMessage({ action: ACTION.GAMEOVER, gameId: this.gameId, result, reason }),
     ).catch((err) => this.log(`Failed to send gameover: ${err}`));
 
+    this.sendMessage('gg').catch(() => {});
+
     this.engine.destroy();
     this.onGameEnd({ gameId: this.gameId, result, reason, pgn: this.chess.pgn() });
   }
