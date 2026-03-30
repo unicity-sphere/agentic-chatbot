@@ -8,7 +8,7 @@ import {
   type GameOverReason,
 } from './protocol.js';
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 5_000;
 
 export interface GameEndInfo {
   gameId: string;
@@ -106,7 +106,11 @@ export class Game {
           return;
         }
         if (msg.moveNum > 0 && msg.moveNum <= this.lastAppliedOpponentMoveNum) {
-          this.log(`IGNORED mv ${msg.san} #${msg.moveNum} — already applied (have #${this.lastAppliedOpponentMoveNum})`);
+          // Opponent resent an old move — they didn't get our reply. Resend immediately.
+          if (this.lastMoveSent) {
+            this.log(`RECV stale mv #${msg.moveNum} — opponent missed our #${this.lastMoveSent.moveNum}, resending now`);
+            this.sendMessage(this.buildMoveMsg()).catch(() => {});
+          }
           return;
         }
         this.lastOpponentActivity = Date.now();
