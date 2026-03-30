@@ -20,6 +20,7 @@ export class SphereBot {
 
   async start(): Promise<void> {
     console.log(`${this.prefix} Starting...`);
+    console.log(`${this.prefix} Creating providers (network=${this.config.network}, dataDir=${this.config.dataDir})...`);
 
     const providers = createNodeProviders({
       network: this.config.network,
@@ -32,15 +33,16 @@ export class SphereBot {
         },
       } : {}),
     });
+    console.log(`${this.prefix} Providers created, calling Sphere.init()...`);
 
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,
       l1: null,
       autoGenerate: true,
       nametag: this.config.nametag,
-      // Force DM lookback to 24h ago to avoid stale future timestamps from NIP-17 randomization
       dmSince: Math.floor(Date.now() / 1000) - 86400,
     });
+    console.log(`${this.prefix} Sphere.init() complete (created=${created})`);
 
     this.sphere = sphere;
 
@@ -60,7 +62,6 @@ export class SphereBot {
         await sphere.registerNametag(this.config.nametag);
         console.log(`${this.prefix} Nametag registered successfully`);
       } catch (err: any) {
-        // ALREADY_INITIALIZED means wallet has a nametag but recovery didn't find it
         console.log(`${this.prefix} registerNametag: ${err?.message ?? err}`);
       }
     }
@@ -71,14 +72,20 @@ export class SphereBot {
     console.log(`${this.prefix} Chain pubkey: ${identity.chainPubkey}`);
 
     // Listen for incoming DMs
+    console.log(`${this.prefix} Registering DM listener...`);
     sphere.communications.onDirectMessage(async (message) => {
+      const label = message.senderNametag ? `@${message.senderNametag}` : message.senderPubkey.slice(0, 12) + '...';
+      console.log(`${this.prefix} DM received from ${label}: ${message.content.slice(0, 100)}`);
+
       // Ignore our own messages
-      if (message.senderPubkey === identity.chainPubkey) return;
+      if (message.senderPubkey === identity.chainPubkey) {
+        console.log(`${this.prefix} Ignoring own message`);
+        return;
+      }
 
       // Welcome trigger → respond with canned message, skip LLM
       if (this.config.welcomeTrigger && this.config.welcomeMessage
           && message.content === this.config.welcomeTrigger) {
-        const label = message.senderNametag ? `@${message.senderNametag}` : message.senderPubkey.slice(0, 12) + '...';
         try {
           await sphere.communications.sendDM(message.senderPubkey, this.config.welcomeMessage);
           console.log(`${this.prefix} Sent welcome to ${label}`);
