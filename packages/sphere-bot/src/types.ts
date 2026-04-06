@@ -37,6 +37,8 @@ export interface SphereBotConfig {
   mcpServers: Array<{ name: string; url: string }>;
   /** Optional system prompt for responding to token transfers. If undefined, token transfers are ignored. */
   tokenTransferPrompt?: string;
+  /** Disable DM caching — messages flow through handlers but are never stored (default: true) */
+  cacheMessages?: boolean;
   /** Optional oracle/aggregator overrides */
   oracle?: {
     /** Path to trust base JSON file (e.g. './trustbase-testnet.json') */
