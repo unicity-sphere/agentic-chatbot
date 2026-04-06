@@ -42,6 +42,7 @@ export class SphereBot {
       nametag: this.config.nametag,
       mnemonic: this.config.mnemonic,
       dmSince: Math.floor(Date.now() / 1000) - 86400,
+      communications: { cacheMessages: this.config.cacheMessages ?? true },
     });
     console.log(`${this.prefix} Sphere.init() complete (created=${created})`);
 

@@ -91,5 +91,6 @@ export function loadConfig(): SphereBotConfig {
       trustBasePath: process.env.TRUSTBASE_PATH || undefined,
       debug: process.env.ORACLE_DEBUG === 'true',
     },
+    cacheMessages: false,
   };
 }
