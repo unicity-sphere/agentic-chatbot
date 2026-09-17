@@ -21,16 +21,14 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Sphere, TokenRegistry } from '@unicitylabs/sphere-sdk';
+import { Sphere, TokenRegistry, type NetworkType } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
 import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
 import { BotWallet } from '../src/wallet.js';
 import { createSplitStorageProvider } from '../src/split-storage.js';
 import { rewardForElo } from '../src/rewards.js';
 
-type Network = 'mainnet' | 'testnet' | 'testnet2' | 'dev';
-
-const NETWORK = (process.env.NETWORK || 'testnet2') as Network;
+const NETWORK = (process.env.NETWORK || 'testnet2') as NetworkType;
 const WALLET_API_URL = process.env.WALLET_API_URL || 'https://wallet-api.staging.unicity.network';
 const AGGREGATOR_KEY = process.env.AGGREGATOR_KEY;
 const COIN_SYMBOL = process.env.COIN_SYMBOL || 'UCT';

@@ -3,7 +3,7 @@ export interface ChessBotConfig {
   nametag: string;
   /** BIP39 mnemonic for wallet recovery */
   mnemonic?: string;
-  /** Network: mainnet, testnet, or dev */
+  /** Network: mainnet, testnet or testnet2 */
   network: string;
   /** Directory for wallet persistence (hot path; may be tmpfs) */
   dataDir: string;

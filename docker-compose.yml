@@ -151,8 +151,12 @@ services:
       # WALLET_API_URL must be https off-loopback; the bots need outbound HTTPS
       # egress to it. WALLET_API_DEVICE_ID is the stable device label (see the
       # tmpfs note below for why the refresh token isn't actually persisted).
+      # WALLET_API_URL must be the wallet-api the PLAYERS' wallets use: a reward
+      # deposited on another backend succeeds but is never claimed. The testnet2
+      # sphere.unicity.network wallet reads wallet-api.unicity.network; staging
+      # has a separate database, and wallet-api.mainnet is real money.
       AGGREGATOR_KEY: ${AGGREGATOR_KEY:-}
-      WALLET_API_URL: ${WALLET_API_URL:-https://wallet-api.staging.unicity.network}
+      WALLET_API_URL: ${WALLET_API_URL:-https://wallet-api.unicity.network}
       WALLET_API_DEVICE_ID: ${CHESS_BOT_DEVICE_ID:-chess-bot-prod-1}
       MAX_CONCURRENT_GAMES: ${MAX_CONCURRENT_GAMES:-25}
       SHUTDOWN_GRACE_MS: ${CHESS_BOT_SHUTDOWN_GRACE_MS:-60000}

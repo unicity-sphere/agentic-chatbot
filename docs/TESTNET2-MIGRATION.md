@@ -10,7 +10,7 @@
 
 1. **Confirm every bot's mnemonic is set in `.env`.** The bots do **not** auto-generate. After the data wipe (step 3) each bot re-creates its wallet from `*_MNEMONIC`; the same mnemonic ⇒ same `chainPubkey` + `@nametag`. A missing mnemonic = the bot refuses to start; a *changed* one = a new identity (loses the `@name`). Back up / verify: `KBBOT_MNEMONIC`, `VIKTOR_MNEMONIC`, `CHESS_BOT_MNEMONIC`, `L3_MNEMONIC`.
 2. **Provision the new secrets/env** (see §1).
-3. **Network egress:** the host needs outbound **HTTPS** to `gateway.testnet2.unicity.network` (aggregator, all bots) and `wallet-api.staging.unicity.network` (chess-bot only). Nostr relays (`wss://…unicity.network`) as before.
+3. **Network egress:** the host needs outbound **HTTPS** to `gateway.testnet2.unicity.network` (aggregator, all bots) and `wallet-api.unicity.network` (chess-bot only). Nostr relays (`wss://…unicity.network`) as before.
 4. **Lockfile is already regenerated and committed** for 0.11.4 — Docker `--frozen-lockfile` builds will succeed. Do **not** hand-edit `pnpm-lock.yaml`.
 
 ---
@@ -20,7 +20,7 @@
 | Var | Value | Notes |
 |---|---|---|
 | `AGGREGATOR_KEY` | `sk_…` (testnet2 gateway key) | **Required.** Shared by all bots (v2 engine). If empty, the SDK falls back to a public default — fine for messaging bots, but set the real key (chess-bot moves money). |
-| `WALLET_API_URL` | `https://wallet-api.staging.unicity.network` | chess-bot only. Must be **https off-loopback**. Has a compose default. |
+| `WALLET_API_URL` | `https://wallet-api.unicity.network` | chess-bot only. Must be **https off-loopback**. Has a compose default. Must be the wallet-api the **players' wallets** use (sphere.unicity.network → prod): rewards are mailbox deposits, and a deposit on another backend (e.g. staging, a separate database) reports success but is never claimed. |
 | `CHESS_BOT_DEVICE_ID` | `chess-bot-prod-1` (stable) | chess-bot only. Stable device label. Compose default provided. |
 | `KBBOT_NETWORK` / `VIKTOR_NETWORK` / `CHESS_BOT_NETWORK` / `L3_NETWORK` | `testnet2` | Compose **already defaults all four to `testnet2`** — only set to override. |
 | `L3_AGGREGATOR_URL` | `https://gateway.testnet2.unicity.network/` | unicity-l3 block-poller endpoint. Compose default points here. ⚠️ verify this host serves the L3 block RPC (it does today). |

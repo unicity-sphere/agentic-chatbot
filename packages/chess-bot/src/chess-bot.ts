@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import WebSocket from 'ws';
-import { Sphere, STORAGE_KEYS_GLOBAL } from '@unicitylabs/sphere-sdk';
+import { Sphere, STORAGE_KEYS_GLOBAL, type NetworkType } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders, createFileStorageProvider } from '@unicitylabs/sphere-sdk/impl/nodejs';
 import { createSplitStorageProvider } from './split-storage.js';
 import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
@@ -200,12 +200,15 @@ export class ChessBot {
     // Resolve the network once and reuse it for the providers, the wallet-api
     // client and Sphere.init, so the TokenRegistry, transports and wallet-api
     // can never diverge. Honors the NETWORK env (config default is testnet2).
-    const network = (this.config.network || 'testnet2') as 'mainnet' | 'testnet' | 'testnet2' | 'dev';
+    const network = (this.config.network || 'testnet2') as NetworkType;
 
     const walletApiUrl = process.env.WALLET_API_URL;
     if (!walletApiUrl) {
       throw new Error('WALLET_API_URL is required: chess-bot uses the wallet-api rail for reward payouts');
     }
+    // Rewards are claimable only on the wallet-api the players' wallets use, and
+    // a deposit to any other one still reports success — so make it visible.
+    console.log(`${this.tag} wallet-api: ${walletApiUrl} (network=${network})`);
 
     // Base bundle: Nostr transport (messaging / group chat / nametag), oracle
     // (aggregator + trustbase + apiKey) and storage. On the 0.9.x line `network`

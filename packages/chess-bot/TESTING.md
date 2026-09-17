@@ -60,7 +60,10 @@ touches the production nametag or wallet.
 ```bash
 # From the repo root, with AGGREGATOR_KEY set.
 export AGGREGATOR_KEY=...
-export WALLET_API_URL=https://wallet-api.staging.unicity.network
+# The wallet-api YOUR wallet uses — the reward is a mailbox deposit, claimable
+# only there. sphere.unicity.network uses prod; staging is a separate database,
+# so a bot on staging "sends" rewards that never reach a prod wallet.
+export WALLET_API_URL=https://wallet-api.unicity.network
 export NETWORK=testnet2
 
 # A throwaway identity — NOT the production nametag or mnemonic.
@@ -83,6 +86,7 @@ First run prints `*** SAVE THIS MNEMONIC ***` — put it in `BOT_MNEMONIC` so
 later runs reuse the same wallet. Then watch for:
 
 ```
+[chess-bot] wallet-api: https://wallet-api.unicity.network (network=testnet2)
 [chess-bot] Nametag: @chess-bot-staging-...
 [chess-bot][wallet] balance low: 0 UCT < 100. Self-minting ...
 [chess-bot][wallet] balance after self-mint: 1000 UCT

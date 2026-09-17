@@ -1,4 +1,4 @@
-import type { StorageProvider, FullIdentity, TrackedAddressEntry } from '@unicitylabs/sphere-sdk';
+import type { StorageProvider, FullIdentity, NetworkType, TrackedAddressEntry } from '@unicitylabs/sphere-sdk';
 import { createFileStorageProvider } from '@unicitylabs/sphere-sdk/impl/nodejs';
 
 /**
@@ -50,7 +50,7 @@ export interface SplitStorageConfig {
   fastDir: string;
   /** Durable tier (real disk): the payments-v2 journals. */
   durableDir: string;
-  network?: 'mainnet' | 'testnet' | 'testnet2' | 'dev';
+  network?: NetworkType;
 }
 
 /**
