@@ -10,7 +10,7 @@
 
 1. **Confirm every bot's mnemonic is set in `.env`.** The bots do **not** auto-generate. After the data wipe (step 3) each bot re-creates its wallet from `*_MNEMONIC`; the same mnemonic ⇒ same `chainPubkey` + `@nametag`. A missing mnemonic = the bot refuses to start; a *changed* one = a new identity (loses the `@name`). Back up / verify: `KBBOT_MNEMONIC`, `VIKTOR_MNEMONIC`, `CHESS_BOT_MNEMONIC`, `L3_MNEMONIC`.
 2. **Provision the new secrets/env** (see §1).
-3. **Network egress:** the host needs outbound **HTTPS** to `gateway.testnet2.unicity.network` (aggregator, all bots) and `wallet-api.unicity.network` (chess-bot only). Nostr relays (`wss://…unicity.network`) as before.
+3. **Network egress:** the host needs outbound **HTTPS** to `gateway.testnet2.unicity.network` (aggregator, all bots) and `wallet-api.unicity.network` (all bots). Nostr relays (`wss://…unicity.network`) as before.
 4. **Lockfile is already regenerated and committed** for 0.11.4 — Docker `--frozen-lockfile` builds will succeed. Do **not** hand-edit `pnpm-lock.yaml`.
 
 ---
@@ -20,8 +20,8 @@
 | Var | Value | Notes |
 |---|---|---|
 | `AGGREGATOR_KEY` | `sk_…` (testnet2 gateway key) | **Required.** Shared by all bots (v2 engine). If empty, the SDK falls back to a public default — fine for messaging bots, but set the real key (chess-bot moves money). |
-| `WALLET_API_URL` | `https://wallet-api.unicity.network` | chess-bot only. Must be **https off-loopback**. Has a compose default. Must be the wallet-api the **players' wallets** use (sphere.unicity.network → prod): rewards are mailbox deposits, and a deposit on another backend (e.g. staging, a separate database) reports success but is never claimed. |
-| `CHESS_BOT_DEVICE_ID` | `chess-bot-prod-1` (stable) | chess-bot only. Stable device label. Compose default provided. |
+| `WALLET_API_URL` | `https://wallet-api.unicity.network` | All bots: sphere-sdk ≥ 0.14.1 refuses to init without a wallet-api composition, even for the messaging bots. Only chess-bot moves money through it. Must be **https off-loopback**. Has a compose default. Must be the wallet-api the **players' wallets** use (sphere.unicity.network → prod): rewards are mailbox deposits, and a deposit on another backend (e.g. staging, a separate database) reports success but is never claimed. |
+| `CHESS_BOT_DEVICE_ID` / `KBBOT_DEVICE_ID` / `VIKTOR_DEVICE_ID` / `L3_DEVICE_ID` | `<bot>-prod-1` (stable) | Stable per-bot wallet-api device label. Compose defaults provided. |
 | `KBBOT_NETWORK` / `VIKTOR_NETWORK` / `CHESS_BOT_NETWORK` / `L3_NETWORK` | `testnet2` | Compose **already defaults all four to `testnet2`** — only set to override. |
 | `L3_AGGREGATOR_URL` | `https://gateway.testnet2.unicity.network/` | unicity-l3 block-poller endpoint. Compose default points here. ⚠️ verify this host serves the L3 block RPC (it does today). |
 | `L3_GROUP_ID` | the chess/block group id | Required for l3 to post (e.g. `l3blocks`). |
@@ -59,7 +59,7 @@ docker compose logs -f --tail=100 chess-bot unicity-l3 kbbot viktor
 
 ## 3. Per-bot notes
 
-- **kbbot, viktor** — messaging-only (DMs / group chat). No wallet-api, no money. Need only `NETWORK=testnet2` + `AGGREGATOR_KEY`. They no longer react to token transfers (that path was removed).
+- **kbbot, viktor** — messaging bots (DMs / group chat); they move no money. Need `NETWORK=testnet2` + `AGGREGATOR_KEY` + `WALLET_API_URL` (sphere-sdk ≥ 0.14.1 refuses to init without a wallet-api composition — there is no messaging-only mode). They no longer react to token transfers (that path was removed).
 - **chess-bot** — the only money-moving bot. Full wallet-api wiring (`WALLET_API_URL` + stable `CHESS_BOT_DEVICE_ID`). Re-funds itself via **self-mint** on startup (no faucet). `/app/data` stays on **tmpfs** by design (perf); see §4.
 - **unicity-l3** — posts block info to `L3_GROUP_ID`. Needs the `@unicity-l3` nametag **allowlisted to write** on the group's relay. Reads the testnet2 block aggregator (`L3_AGGREGATOR_URL`). Posts only **non-empty** blocks by default (`SHOW_EMPTY_BLOCKS=false`); links use `?network=testnet2&shard=<prefix>&block=<n>` to the smt-explorer.
 
