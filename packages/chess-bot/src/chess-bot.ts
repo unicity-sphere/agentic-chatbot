@@ -206,6 +206,9 @@ export class ChessBot {
     if (!walletApiUrl) {
       throw new Error('WALLET_API_URL is required: chess-bot uses the wallet-api rail for reward payouts');
     }
+    // Rewards are claimable only on the wallet-api the players' wallets use, and
+    // a deposit to any other one still reports success — so make it visible.
+    console.log(`${this.tag} wallet-api: ${walletApiUrl} (network=${network})`);
 
     // Base bundle: Nostr transport (messaging / group chat / nametag), oracle
     // (aggregator + trustbase + apiKey) and storage. On the 0.9.x line `network`
