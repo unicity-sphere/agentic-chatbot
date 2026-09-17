@@ -1,8 +1,10 @@
+import type { NetworkType } from '@unicitylabs/sphere-sdk';
+
 export interface SphereBotConfig {
   /** Bot name used for log prefixes, e.g. 'kbbot', 'viktor' */
   name: string;
   /** Sphere network */
-  network: 'mainnet' | 'testnet' | 'testnet2' | 'dev';
+  network: NetworkType;
   /** Sphere wallet data directory */
   dataDir: string;
   /** Sphere token storage directory */

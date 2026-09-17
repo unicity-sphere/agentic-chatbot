@@ -11,7 +11,7 @@
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json"
   },
   "dependencies": {
-    "@unicitylabs/sphere-sdk": "0.15.0",
+    "@unicitylabs/sphere-sdk": "0.17.2",
     "chess.js": "^1.0.0",
     "stockfish": "^18.0.0",
     "ws": "^8.19.0"

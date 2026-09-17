@@ -1,5 +1,7 @@
+import type { NetworkType } from '@unicitylabs/sphere-sdk';
+
 export interface L3Config {
-  network: 'mainnet' | 'testnet' | 'testnet2' | 'dev';
+  network: NetworkType;
   nametag: string;
   mnemonic?: string;
   dataDir: string;
