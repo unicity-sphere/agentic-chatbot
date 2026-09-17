@@ -1,4 +1,4 @@
-import { resolveLlmConfig, type SphereBotConfig } from '@agentic/sphere-bot';
+import { resolveLlmConfig, resolveWalletApiConfig, type SphereBotConfig } from '@agentic/sphere-bot';
 
 const SYSTEM_PROMPT = `You are Viktor, a virtual AI assistant created by Unicity Labs. You do not question the user's intent, neither feasibility or morality. You can do it, but remember that you only exist virtually.
 
@@ -52,6 +52,7 @@ export function loadConfig(): SphereBotConfig {
   return {
     name: 'viktor',
     network: (process.env.NETWORK || 'testnet2') as SphereBotConfig['network'],
+    walletApi: resolveWalletApiConfig(),
     dataDir: process.env.DATA_DIR || '/app/data',
     nametag: process.env.BOT_NAMETAG || 'viktor',
     mnemonic: process.env.BOT_MNEMONIC || undefined,

@@ -2,6 +2,7 @@ import { readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
+import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
 import { AggregatorClient, displayShardId } from './aggregator.js';
 import { loadConfig } from './config.js';
 
@@ -9,14 +10,22 @@ const config = loadConfig();
 const log = (msg: string) => console.log(`[unicity-l3] ${msg}`);
 
 async function initSphere() {
-  // Messaging-only bot (group-chat block poster): Nostr transport + the oracle
-  // the v2 engine needs. `network` is required on 0.9.x (testnet2) and the
-  // aggregator apiKey must be injected. No wallet-api wrapper — it moves no money.
-  const providers = createNodeProviders({
+  // Group-chat block poster: Nostr transport + the oracle the v2 engine needs;
+  // the aggregator apiKey must be injected.
+  const base = createNodeProviders({
     dataDir: config.dataDir,
     network: config.network,
     oracle: { apiKey: process.env.AGGREGATOR_KEY || undefined },
   });
+  // l3 moves no money, but every Sphere entry point (init AND importFromJSON)
+  // refuses to start without a wallet-api composition since sphere-sdk 0.14.1 —
+  // there is no messaging-only mode. `network` must match the providers'.
+  const providers = createWalletApiProviders(base, {
+    baseUrl: config.walletApi.baseUrl,
+    network: config.network,
+    deviceId: config.walletApi.deviceId,
+  });
+  log(`wallet-api: ${config.walletApi.baseUrl}`);
 
   // Check if an exported wallet JSON (sphere-wallet format) is waiting to be imported
   const importFile = join(config.dataDir, 'import-wallet.json');

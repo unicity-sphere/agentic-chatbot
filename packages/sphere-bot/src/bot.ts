@@ -1,5 +1,6 @@
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
+import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
 import type { ModelMessage } from 'ai';
 import type { SphereBotConfig } from './types.js';
 import type { SphereBotAgent } from './agent.js';
@@ -32,13 +33,12 @@ export class SphereBot {
     console.log(`${this.prefix} Starting...`);
     console.log(`${this.prefix} Creating providers (network=${this.config.network}, dataDir=${this.config.dataDir})...`);
 
-    // Messaging-only bot: Nostr transport (DMs / group chat / nametag) plus the
-    // oracle the v2 engine needs for the best-effort Unicity-ID mint inside
-    // registerNametag. `network` is required on 0.9.x (testnet2). The aggregator
-    // apiKey is injected when provided (AGGREGATOR_KEY); testnet2 has a public
-    // default, so it is optional for this non-paying bot. No wallet-api wrapper —
-    // this bot never sends or receives tokens.
-    const providers = createNodeProviders({
+    // Messaging bot: Nostr transport (DMs / group chat / nametag) plus the oracle
+    // the v2 engine needs for the best-effort Unicity-ID mint inside
+    // registerNametag. The aggregator apiKey is injected when provided
+    // (AGGREGATOR_KEY); testnet2 has a public default, so it is optional for this
+    // non-paying bot.
+    const base = createNodeProviders({
       network: this.config.network,
       dataDir: this.config.dataDir,
       oracle: {
@@ -49,7 +49,15 @@ export class SphereBot {
         debug: this.config.oracle?.debug,
       },
     });
-    console.log(`${this.prefix} Providers created, calling Sphere.init()...`);
+    // The bot never sends tokens, but Sphere.init (sphere-sdk >= 0.14.1) refuses
+    // to start without a wallet-api composition — there is no messaging-only
+    // mode. `network` must match the providers' network.
+    const providers = createWalletApiProviders(base, {
+      baseUrl: this.config.walletApi.baseUrl,
+      network: this.config.network,
+      deviceId: this.config.walletApi.deviceId,
+    });
+    console.log(`${this.prefix} Providers created (wallet-api: ${this.config.walletApi.baseUrl}), calling Sphere.init()...`);
 
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,

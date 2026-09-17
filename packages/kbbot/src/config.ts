@@ -1,4 +1,4 @@
-import { resolveLlmConfig, resolveRateLimit, type SphereBotConfig } from '@agentic/sphere-bot';
+import { resolveLlmConfig, resolveRateLimit, resolveWalletApiConfig, type SphereBotConfig } from '@agentic/sphere-bot';
 
 const SYSTEM_PROMPT = `You are KBBot, a helpful knowledge base assistant for the Unicity ecosystem. You answer questions about Unicity, AgentSphere, Sphere wallet, agentic commerce, secure AI agents, and related topics.
 
@@ -24,6 +24,7 @@ export function loadConfig(): SphereBotConfig {
   return {
     name: 'kbbot',
     network: (process.env.NETWORK || 'testnet2') as SphereBotConfig['network'],
+    walletApi: resolveWalletApiConfig(),
     dataDir: process.env.DATA_DIR || '/app/data',
     nametag: process.env.BOT_NAMETAG || 'kbbot',
     mnemonic: process.env.BOT_MNEMONIC || undefined,
