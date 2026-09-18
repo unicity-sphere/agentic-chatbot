@@ -1,6 +1,5 @@
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
-import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
 import type { ModelMessage } from 'ai';
 import type { SphereBotConfig } from './types.js';
 import type { SphereBotAgent } from './agent.js';
@@ -33,12 +32,10 @@ export class SphereBot {
     console.log(`${this.prefix} Starting...`);
     console.log(`${this.prefix} Creating providers (network=${this.config.network}, dataDir=${this.config.dataDir})...`);
 
-    // Messaging bot: Nostr transport (DMs / group chat / nametag) plus the oracle
-    // the v2 engine needs for the best-effort Unicity-ID mint inside
-    // registerNametag. The aggregator apiKey is injected when provided
-    // (AGGREGATOR_KEY); testnet2 has a public default, so it is optional for this
-    // non-paying bot.
-    const base = createNodeProviders({
+    // Messaging-only bot: Nostr transport (DMs / group chat / nametag) plus the
+    // oracle. The aggregator apiKey is injected when provided (AGGREGATOR_KEY);
+    // testnet2 has a public default, so it is optional for this non-paying bot.
+    const providers = createNodeProviders({
       network: this.config.network,
       dataDir: this.config.dataDir,
       oracle: {
@@ -49,19 +46,18 @@ export class SphereBot {
         debug: this.config.oracle?.debug,
       },
     });
-    // The bot never sends tokens, but Sphere.init (sphere-sdk >= 0.14.1) refuses
-    // to start without a wallet-api composition — there is no messaging-only
-    // mode. `network` must match the providers' network.
-    const providers = createWalletApiProviders(base, {
-      baseUrl: this.config.walletApi.baseUrl,
-      network: this.config.network,
-      deviceId: this.config.walletApi.deviceId,
-    });
-    console.log(`${this.prefix} Providers created (wallet-api: ${this.config.walletApi.baseUrl}), calling Sphere.init()...`);
+    console.log(`${this.prefix} Providers created, calling Sphere.init()...`);
 
     const { sphere, created, generatedMnemonic } = await Sphere.init({
       ...providers,
       network: this.config.network, // required: Sphere.init forwards it to configure the TokenRegistry
+      // This bot never sends or receives tokens. 'none' (sphere-sdk >= 0.17.3)
+      // is the EXPLICIT messaging-only opt-out: no wallet-api session, device
+      // registration, wake socket, mailbox drain, token engine or pv2g2: keys.
+      // Omitting the field entirely still throws INVALID_CONFIG, so a dropped
+      // env var can never be mistaken for this choice. sphere.payments throws
+      // PAYMENTS_NOT_COMPOSED; nothing here touches it.
+      walletApi: 'none',
       autoGenerate: false,
       nametag: this.config.nametag,
       mnemonic: this.config.mnemonic,

@@ -5,12 +5,6 @@ export interface SphereBotConfig {
   name: string;
   /** Sphere network */
   network: NetworkType;
-  /**
-   * wallet-api composition. Required by Sphere.init (sphere-sdk >= 0.14.1) even
-   * for bots that move no money. `deviceId` must be stable across restarts so
-   * the persisted refresh token is reused instead of registering a new device.
-   */
-  walletApi: { baseUrl: string; deviceId?: string };
   /** Sphere wallet data directory */
   dataDir: string;
   /** Sphere token storage directory */

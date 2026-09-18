@@ -86,11 +86,6 @@ services:
       DATA_DIR: /app/data
       TOKENS_DIR: /app/tokens
       MAX_HISTORY_MESSAGES: ${KBBOT_MAX_HISTORY_MESSAGES:-20}
-      # sphere-sdk refuses to init without a wallet-api composition, even for a
-      # bot that moves no money. Same WALLET_API_URL as chess-bot; the device id
-      # must be stable so the persisted refresh token is reused across restarts.
-      WALLET_API_URL: ${WALLET_API_URL:-https://wallet-api.unicity.network}
-      WALLET_API_DEVICE_ID: ${KBBOT_DEVICE_ID:-kbbot-prod-1}
       # No TRUSTBASE_PATH: rely on the SDK's baked-in testnet2 trustbase
       # (networkId 4). The old bundled trustbase-testnet.json was networkId 3.
       AGGREGATOR_KEY: ${AGGREGATOR_KEY:-}
@@ -124,11 +119,6 @@ services:
       VIKTOR_LLM_BASE_URL: ${VIKTOR_LLM_BASE_URL:-}
       VIKTOR_LLM_TEMPERATURE: ${VIKTOR_LLM_TEMPERATURE:-}
       AGGREGATOR_KEY: ${AGGREGATOR_KEY:-}
-      # sphere-sdk refuses to init without a wallet-api composition, even for a
-      # bot that moves no money. Same WALLET_API_URL as chess-bot; the device id
-      # must be stable so the persisted refresh token is reused across restarts.
-      WALLET_API_URL: ${WALLET_API_URL:-https://wallet-api.unicity.network}
-      WALLET_API_DEVICE_ID: ${VIKTOR_DEVICE_ID:-viktor-prod-1}
       MCP_RAG_URL: http://mcp-rag:3003/mcp
       MCP_WEB_URL: http://mcp-web:3002/mcp
       DATA_DIR: /app/data
@@ -229,11 +219,6 @@ services:
       BOT_NAMETAG: ${L3_NAMETAG:-unicity-l3}
       BOT_MNEMONIC: ${L3_MNEMONIC:-}
       AGGREGATOR_KEY: ${AGGREGATOR_KEY:-}
-      # sphere-sdk refuses to init without a wallet-api composition, even for a
-      # bot that moves no money. Same WALLET_API_URL as chess-bot; the device id
-      # must be stable so the persisted refresh token is reused across restarts.
-      WALLET_API_URL: ${WALLET_API_URL:-https://wallet-api.unicity.network}
-      WALLET_API_DEVICE_ID: ${L3_DEVICE_ID:-unicity-l3-prod-1}
       # testnet2 block-info aggregator (verify this host serves /config/shards +
       # get_block_height/get_block; testnet2 is a fresh chain, heights reset).
       AGGREGATOR_URL: ${L3_AGGREGATOR_URL:-https://gateway.testnet2.unicity.network/}

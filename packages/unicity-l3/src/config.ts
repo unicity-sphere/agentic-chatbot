@@ -4,8 +4,6 @@ export interface L3Config {
   network: NetworkType;
   nametag: string;
   mnemonic?: string;
-  /** wallet-api composition — required by Sphere.init even though l3 moves no money. */
-  walletApi: { baseUrl: string; deviceId?: string };
   dataDir: string;
   aggregatorUrl: string;
   explorerBaseUrl: string;
@@ -23,19 +21,10 @@ function posIntEnv(value: string | undefined, fallback: number): number {
 }
 
 export function loadConfig(): L3Config {
-  // sphere-sdk >= 0.14.1 refuses to init without a wallet-api composition (there
-  // is no messaging-only mode), so fail fast here rather than inside Sphere.init.
-  const walletApiUrl = process.env.WALLET_API_URL?.trim();
-  if (!walletApiUrl) {
-    throw new Error('WALLET_API_URL is required: sphere-sdk refuses to init without a wallet-api composition');
-  }
-  const walletApiDeviceId = process.env.WALLET_API_DEVICE_ID?.trim() || undefined;
-
   return {
     network: (process.env.NETWORK || 'testnet2') as L3Config['network'],
     nametag: process.env.BOT_NAMETAG || 'unicity-l3',
     mnemonic: process.env.BOT_MNEMONIC || undefined,
-    walletApi: { baseUrl: walletApiUrl, ...(walletApiDeviceId ? { deviceId: walletApiDeviceId } : {}) },
     dataDir: process.env.DATA_DIR || '/app/data',
     // testnet2 block-info aggregator for the raw block-polling client (NOT the
     // SDK oracle). NOTE: testnet2 is a fresh chain — block heights reset and

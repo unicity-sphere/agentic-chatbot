@@ -2,7 +2,6 @@ import { readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { Sphere } from '@unicitylabs/sphere-sdk';
 import { createNodeProviders } from '@unicitylabs/sphere-sdk/impl/nodejs';
-import { createWalletApiProviders } from '@unicitylabs/sphere-sdk/impl/shared/wallet-api';
 import { AggregatorClient, displayShardId } from './aggregator.js';
 import { loadConfig } from './config.js';
 
@@ -10,22 +9,13 @@ const config = loadConfig();
 const log = (msg: string) => console.log(`[unicity-l3] ${msg}`);
 
 async function initSphere() {
-  // Group-chat block poster: Nostr transport + the oracle the v2 engine needs;
+  // Messaging-only bot (group-chat block poster): Nostr transport + the oracle;
   // the aggregator apiKey must be injected.
-  const base = createNodeProviders({
+  const providers = createNodeProviders({
     dataDir: config.dataDir,
     network: config.network,
     oracle: { apiKey: process.env.AGGREGATOR_KEY || undefined },
   });
-  // l3 moves no money, but every Sphere entry point (init AND importFromJSON)
-  // refuses to start without a wallet-api composition since sphere-sdk 0.14.1 —
-  // there is no messaging-only mode. `network` must match the providers'.
-  const providers = createWalletApiProviders(base, {
-    baseUrl: config.walletApi.baseUrl,
-    network: config.network,
-    deviceId: config.walletApi.deviceId,
-  });
-  log(`wallet-api: ${config.walletApi.baseUrl}`);
 
   // Check if an exported wallet JSON (sphere-wallet format) is waiting to be imported
   const importFile = join(config.dataDir, 'import-wallet.json');
@@ -37,6 +27,7 @@ async function initSphere() {
       const result = await Sphere.importFromJSON({
         ...providers,
         network: config.network, // required: every Sphere entry point must forward network
+        walletApi: 'none', // l3 moves no money — see the note on Sphere.init below
         jsonContent: raw,
         nametag: config.nametag,
         groupChat: true,
@@ -58,6 +49,12 @@ async function initSphere() {
   const { sphere, created, generatedMnemonic } = await Sphere.init({
     ...providers,
     network: config.network, // required: Sphere.init forwards it to configure the TokenRegistry
+    // l3 only posts block info to a group chat. 'none' (sphere-sdk >= 0.17.3) is
+    // the EXPLICIT messaging-only opt-out: no wallet-api session, device
+    // registration, wake socket, mailbox drain, token engine or pv2g2: keys.
+    // Omitting the field still throws INVALID_CONFIG, so a dropped env var can
+    // never be mistaken for this choice.
+    walletApi: 'none',
     autoGenerate: false,
     nametag: config.nametag,
     mnemonic: config.mnemonic,

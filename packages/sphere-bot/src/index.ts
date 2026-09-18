@@ -5,7 +5,6 @@ export { SphereBotAgent } from './agent.js';
 export { McpToolManager } from './mcp-client.js';
 export { createModel } from './provider.js';
 export { resolveLlmConfig } from './llm-config.js';
-export { resolveWalletApiConfig } from './wallet-api-config.js';
 export type { LlmDefaults } from './llm-config.js';
 export { DmGuard, resolveRateLimit } from './dm-guard.js';
 export type { DmGuardOptions, DmDecision, RateLimit } from './dm-guard.js';
